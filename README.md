@@ -1,4 +1,4 @@
-# e-puck-ros2
+# e-puck_ros2
 
 ## Acknowledgement
 
