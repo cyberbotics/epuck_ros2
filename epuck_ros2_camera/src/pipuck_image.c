@@ -1,6 +1,6 @@
 #include "epuck_ros2_camera/pipuck_image.h"
 
-// #include "pipuck_jpeg.h"
+#include "epuck_ros2_camera/pipuck_jpeg.h"
 
 void pipuck_image_init(pipuck_image_t* image) {
     image->width = 640;

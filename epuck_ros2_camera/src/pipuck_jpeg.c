@@ -9,7 +9,7 @@
 #include <interface/mmal/util/mmal_util_params.h>
 #include <interface/mmal/util/mmal_default_components.h>
 #include <interface/mmal/util/mmal_connection.h>
-#include "pipuck_jpeg.h"
+#include "epuck_ros2_camera/pipuck_jpeg.h"
 
 #define min(X, Y) (((X) < (Y)) ? (X) : (Y))
 #define max(X, Y) (((X) > (Y)) ? (X) : (Y))

@@ -3,10 +3,10 @@
 #include <iostream>
 
 extern "C" {
-  #include "pipuck_image.h"
-  #include "pipuck_jpeg.h"
-  #include "pipuck_ov7670.h"
-  #include "pipuck_v4l2.h"
+  #include "epuck_ros2_camera/pipuck_image.h"
+  #include "epuck_ros2_camera/pipuck_jpeg.h"
+  #include "epuck_ros2_camera/pipuck_ov7670.h"
+  #include "epuck_ros2_camera/pipuck_v4l2.h"
 }
 
 void convert(pipuck_image_t* input_image, pipuck_image_t* output_image, std::string output_filename) {
