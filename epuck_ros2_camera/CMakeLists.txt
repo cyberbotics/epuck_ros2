@@ -21,19 +21,41 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 
+set(MMAL_LIBS
+  pthread
+  /opt/vc/lib/libbcm_host.so
+  /opt/vc/lib/libvcos.so
+  /opt/vc/lib/libmmal.so
+  /opt/vc/lib/libmmal_core.so
+  /opt/vc/lib/libmmal_util.so
+  /opt/vc/lib/libmmal_vc_client.so
+  /opt/vc/lib/libvchostif.a
+)
+
 add_executable(camera 
 	src/camera.cpp
-	src/pipuck_v4l2.c
+  src/pipuck_v4l2.c
+  src/pipuck_jpeg.c
+  src/pipuck_ov7670.c
   src/pipuck_image.c
 )
+
 target_include_directories(camera PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>)
+  $<INSTALL_INTERFACE:include>
+  /opt/vc/include
+  /opt/vc/include/interface/vcos/pthreads
+  /opt/vc/include/interface/vmcs_host/linux
+)
 
 ament_target_dependencies(camera
   "rclcpp"
   "std_msgs"
   "sensor_msgs"
+)
+
+target_link_libraries(camera 
+  ${MMAL_LIBS}
 )
 
 install(TARGETS camera

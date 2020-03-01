@@ -1,12 +1,11 @@
 #ifndef PIPUCK_IMAGE_H
 #define PIPUCK_IMAGE_H
 
-// #include <interface/mmal/mmal.h>
-// #define PIPUCK_IMAGE_ENCODING_BGR24 MMAL_ENCODING_BGR24
-// #define PIPUCK_IMAGE_ENCODING_YUYV MMAL_ENCODING_YUYV
+#include <interface/mmal/mmal.h>
 
-#define PIPUCK_IMAGE_ENCODING_BGR24 1
-#define PIPUCK_IMAGE_ENCODING_YUYV 2
+#define PIPUCK_IMAGE_ENCODING_BGR24 MMAL_ENCODING_BGR24
+#define PIPUCK_IMAGE_ENCODING_YUYV MMAL_ENCODING_YUYV
+
 
 typedef struct _pipuck_image_t {
     int width;
