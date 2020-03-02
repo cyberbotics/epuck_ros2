@@ -53,18 +53,19 @@ class Robot(object):
             self.devices[name] = Gyro(name)
         print('Starting controller.')
 
-    def step(self, duration):
-        now = time.time()
-        if self.previousTime is not None:
-            diff = now - (self.previousTime + 0.001 * duration)
-            if diff < 0:
-                time.sleep(-diff)
-                self.time += 0.001 * duration
+    def step(self, duration, blocking=False):
+        if blocking:
+            now = time.time()
+            if self.previousTime is not None:
+                diff = now - (self.previousTime + 0.001 * duration)
+                if diff < 0:
+                    time.sleep(-diff)
+                    self.time += 0.001 * duration
+                else:
+                    self.time += diff + 0.001 * duration
             else:
-                self.time += diff + 0.001 * duration
-        else:
-            self.time += 0.001 * duration
-        self.previousTime = time.time()
+                self.time += 0.001 * duration
+            self.previousTime = time.time()
 
         actuatorsData = []
         # left motor
@@ -110,7 +111,10 @@ class Robot(object):
         # communication with i2c bus with main board address
         write = i2c_msg.write(MAIN_ADDR, actuatorsData)
         read = i2c_msg.read(MAIN_ADDR, SENSORS_SIZE)
-        self.bus.i2c_rdwr(write, read)
+        try:
+            self.bus.i2c_rdwr(write, read)
+        except:
+            pass 
         sensorsData = list(read)
         if len(sensorsData) != SENSORS_SIZE:
             sys.exit('Wrond actuator data size.')
@@ -142,7 +146,10 @@ class Robot(object):
                 break
         if groundSensorsEnabled:
             read = i2c_msg.read(GROUND_ADDR, GROUND_SENSORS_SIZE)
-            self.bus.i2c_rdwr(read)
+            try:
+                self.bus.i2c_rdwr(read)
+            except:
+                pass
             groundData = list(read)
             for i in range(3):
                 self.devices[DistanceSensor.groundNames[i]].value = (groundData[i * 2] << 8) + groundData[i * 2 + 1]
