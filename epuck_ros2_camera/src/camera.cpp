@@ -4,6 +4,7 @@
 #include <sensor_msgs/msg/compressed_image.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <std_msgs/msg/string.hpp>
+#include <opencv2/opencv.hpp>
 
 extern "C"
 {
@@ -27,7 +28,7 @@ public:
     pipuck_image_init(&compressed_image);
 
     compressed_image.quality = quality;
-    compressed_image.data = compressed_image_buffer;
+    compressed_image.data = image_buffer;
     captured_image.encoding = PIPUCK_IMAGE_ENCODING_YUYV;
 
     pipuck_ov7670_init();
@@ -44,8 +45,12 @@ public:
 
   ~CameraPublisher()
   {
-    pipuck_v4l2_deinit();
-    pipuck_jpeg_deinit();
+    if (v4l2_initialized == true) {
+      pipuck_v4l2_deinit();
+    }
+    if (jpeg_initialized == true) {
+      pipuck_jpeg_deinit();
+    }
   }
 
 private:
@@ -107,7 +112,19 @@ private:
 
     if (publisher_raw->get_subscription_count() > 0)
     {
-      // TODO: Publish raw
+      cv::Mat input_mat(captured_image.width, captured_image.height, CV_8U, captured_image.data);
+      cv::Mat output_mat;
+      cv::cvtColor(input_mat, output_mat, cv::COLOR_YUV2BGR_Y422);
+
+      auto message = sensor_msgs::msg::Image();
+      message.encoding = "rgb8";
+      message.width = captured_image.width;
+      message.height = captured_image.height;
+      message.step = captured_image.width * 3;
+      message.is_bigendian = false;
+      message.header.stamp = now();
+      message.header.frame_id = "pipuck_image_raw";
+      message.data.assign(output_mat.data, output_mat.data + captured_image.height * captured_image.width * 3);
     }
 
     if (publisher_compressed->get_subscription_count() > 0)
@@ -122,7 +139,7 @@ private:
       auto message = sensor_msgs::msg::CompressedImage();
       message.format = "jpeg";
       message.header.stamp = now();
-      message.header.frame_id = "pipuck_image";
+      message.header.frame_id = "pipuck_image_compressed";
       message.data.assign(compressed_image.data,
                           compressed_image.data + compressed_image.size);
 
@@ -143,7 +160,7 @@ private:
   pipuck_image_t captured_image;
   pipuck_image_t compressed_image;
   OnSetParametersCallbackHandle::SharedPtr callback_handler;
-  char compressed_image_buffer[500 * 1024];
+  char image_buffer[900 * 1024];
   bool v4l2_initialized;
   bool jpeg_initialized;
 };
