@@ -58,9 +58,15 @@ private:
     {
       if (parameter.get_name() == "quality")
       {
-        pipuck_jpeg_deinit();
+        if (jpeg_initialized == true)
+        {
+          pipuck_jpeg_deinit();
+        }
         compressed_image.quality = parameter.as_int();
-        pipuck_jpeg_init(&captured_image, &compressed_image);
+        if (jpeg_initialized == true)
+        {
+          pipuck_jpeg_init(&captured_image, &compressed_image);
+        }
       }
       else if (parameter.get_name() == "interval")
       {
@@ -90,6 +96,14 @@ private:
       }
       pipuck_v4l2_capture(&captured_image);
     }
+    else
+    {
+      if (v4l2_initialized == true)
+      {
+        pipuck_v4l2_deinit();
+        v4l2_initialized = false;
+      }
+    }
 
     if (publisher_raw->get_subscription_count() > 0)
     {
@@ -113,6 +127,14 @@ private:
                           compressed_image.data + compressed_image.size);
 
       publisher_compressed->publish(message);
+    }
+    else
+    {
+      if (jpeg_initialized == true)
+      {
+        pipuck_jpeg_deinit();
+        jpeg_initialized = false;
+      }
     }
   }
   rclcpp::TimerBase::SharedPtr timer;
