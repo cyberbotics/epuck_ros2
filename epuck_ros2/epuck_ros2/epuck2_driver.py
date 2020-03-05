@@ -14,21 +14,16 @@
 
 import rclpy
 from math import pi, cos, sin
-from rclpy.node import Node
 from .controller import Robot
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Range, Image, CameraInfo, Imu, LaserScan
 from tf2_ros import TransformBroadcaster
 from geometry_msgs.msg import Twist, Quaternion, TransformStamped
-from geometry_msgs.msg import Twist
+from .webots_node import WebotsNode
 
 
 WHEEL_DISTANCE = 0.05685
 WHEEL_RADIUS = 0.02
-ENCODER_PERIOD_MS = 100
-DISTANCE_PERIOD_MS = 100
-
-ENCODER_PERIOD_S = ENCODER_PERIOD_MS / 1000
 
 
 def euler_to_quaternion(roll, pitch, yaw):
@@ -55,11 +50,7 @@ def intensity_to_distance(p_x):
         [0.015, 601.46],
         [0.02, 383.84],
         [0.03, 234.93],
-        [0.04, 158.03],
-        [0.05, 120],
-        [0.06, 104.09],
-        [0.07, 67.19],
-        [0.1, 0.0]
+        [0.04, 158.03]
     ]
     for i in range(len(table) - 1):
         if table[i][1] >= p_x and table[i+1][1] < p_x:
@@ -69,14 +60,19 @@ def intensity_to_distance(p_x):
             a_y = table[i+1][0]
             p_y = ((b_y - a_y) / (b_x - a_x)) * (p_x - a_x) + a_y
             return p_y
-    return 0.1
+    return 0.0
 
 
-class EPuck2Controller(Node):
+# echo 27 > /sys/class/gpio/export
+# echo out > /sys/class/gpio/gpio27/direction
+# echo 0 > /sys/class/gpio/gpio27/value
+# echo 1 > /sys/class/gpio/gpio27/value
+
+class EPuck2Controller(WebotsNode):
     def __init__(self, name, args=None):
         super().__init__(name)
         self.robot = Robot()
-        self.timestep = int(self.robot.getBasicTimeStep())
+        self.timestep = 64
 
         # Init motors
         self.left_motor = self.robot.getMotor('left wheel motor')
@@ -91,8 +87,8 @@ class EPuck2Controller(Node):
         # Initialize odometry
         self.prev_left_wheel_ticks = 0
         self.prev_right_wheel_ticks = 0
-        self.prev_position = (0, 0)
-        self.prev_angle = 0
+        self.prev_position = (0.0, 0.0)
+        self.prev_angle = 0.0
         self.left_wheel_sensor = self.robot.getPositionSensor(
             'left wheel sensor')
         self.right_wheel_sensor = self.robot.getPositionSensor(
@@ -100,7 +96,6 @@ class EPuck2Controller(Node):
         self.left_wheel_sensor.enable(self.timestep)
         self.right_wheel_sensor.enable(self.timestep)
         self.odometry_publisher = self.create_publisher(Odometry, '/odom', 1)
-        self.create_timer(ENCODER_PERIOD_MS / 1000, self.odometry_callback)
 
         # Intialize distance sensors
         self.sensor_publishers = {}
@@ -113,21 +108,37 @@ class EPuck2Controller(Node):
             self.sensors['ps{}'.format(i)] = sensor
             self.sensor_publishers['ps{}'.format(i)] = sensor_publisher
 
-        """
         sensor = self.robot.getDistanceSensor('tof')
         sensor.enable(self.timestep)
         sensor_publisher = self.create_publisher(Range, '/distance/tof', 10)
         self.sensors['tof'] = sensor
         self.sensor_publishers['tof'] = sensor_publisher
-        """
+
         self.laser_publisher = self.create_publisher(LaserScan, '/laser', 10)
-        self.create_timer(DISTANCE_PERIOD_MS / 1000, self.distance_callback)
 
         # Steps...
         self.create_timer(self.timestep / 1000, self.step_callback)
 
+        # Transforms
+        self.tf_broadcaster = TransformBroadcaster(self)
+
+        self.tf_laser_scanner = TransformStamped()
+        self.tf_laser_scanner.header.frame_id = 'base_link'
+        self.tf_laser_scanner.child_frame_id = 'laser_scanner'
+        self.tf_laser_scanner.transform.translation.x = 0.0
+        self.tf_laser_scanner.transform.translation.y = 0.0
+        self.tf_laser_scanner.transform.translation.z = 0.0
+        self.tf_laser_scanner.transform.rotation = euler_to_quaternion(0, 0, 0)
+
     def step_callback(self):
         self.robot.step(self.timestep)
+        self.odometry_callback()
+        self.distance_callback()
+        self.publish_static_transforms()
+
+    def publish_static_transforms(self):
+        # Pack & publish transforms
+        self.tf_broadcaster.sendTransform(self.tf_laser_scanner)
 
     def cmd_vel_callback(self, twist):
         self.get_logger().info('Message received')
@@ -139,13 +150,15 @@ class EPuck2Controller(Node):
         self.right_motor.setVelocity(right_velocity)
 
     def odometry_callback(self):
+        encoder_period_s = self.timestep / 1000.0
+
         # Calculate velocities
         left_wheel_ticks = self.left_wheel_sensor.getValue()
         right_wheel_ticks = self.right_wheel_sensor.getValue()
         v_left_rad = (left_wheel_ticks -
-                      self.prev_left_wheel_ticks) / ENCODER_PERIOD_S
+                      self.prev_left_wheel_ticks) / encoder_period_s
         v_right_rad = (right_wheel_ticks -
-                       self.prev_right_wheel_ticks) / ENCODER_PERIOD_S
+                       self.prev_right_wheel_ticks) / encoder_period_s
         v_left = v_left_rad * WHEEL_RADIUS
         v_right = v_right_rad * WHEEL_RADIUS
         v = (v_left + v_right) / 2
@@ -157,23 +170,23 @@ class EPuck2Controller(Node):
         k00 = v * cos(self.prev_angle)
         k01 = v * sin(self.prev_angle)
         k02 = omega
-        k10 = v * cos(self.prev_angle + ENCODER_PERIOD_S * k02 / 2)
-        k11 = v * sin(self.prev_angle + ENCODER_PERIOD_S * k02 / 2)
+        k10 = v * cos(self.prev_angle + encoder_period_s * k02 / 2)
+        k11 = v * sin(self.prev_angle + encoder_period_s * k02 / 2)
         k12 = omega
-        k20 = v * cos(self.prev_angle + ENCODER_PERIOD_S * k12 / 2)
-        k21 = v * sin(self.prev_angle + ENCODER_PERIOD_S * k12 / 2)
+        k20 = v * cos(self.prev_angle + encoder_period_s * k12 / 2)
+        k21 = v * sin(self.prev_angle + encoder_period_s * k12 / 2)
         k22 = omega
-        k30 = v * cos(self.prev_angle + ENCODER_PERIOD_S * k22 / 2)
-        k31 = v * sin(self.prev_angle + ENCODER_PERIOD_S * k22 / 2)
+        k30 = v * cos(self.prev_angle + encoder_period_s * k22 / 2)
+        k31 = v * sin(self.prev_angle + encoder_period_s * k22 / 2)
         k32 = omega
         position = [
-            self.prev_position[0] + (ENCODER_PERIOD_S / 6) *
+            self.prev_position[0] + (encoder_period_s / 6) *
             (k00 + 2 * (k10 + k20) + k30),
-            self.prev_position[1] + (ENCODER_PERIOD_S / 6) *
+            self.prev_position[1] + (encoder_period_s / 6) *
             (k01 + 2 * (k11 + k21) + k31)
         ]
         angle = self.prev_angle + \
-            (ENCODER_PERIOD_S / 6) * (k02 + 2 * (k12 + k22) + k32)
+            (encoder_period_s / 6) * (k02 + 2 * (k12 + k22) + k32)
 
         # Update variables
         self.prev_position = position.copy()
@@ -183,7 +196,7 @@ class EPuck2Controller(Node):
 
         # Pack & publish odometry
         msg = Odometry()
-        msg.header.frame_id = 'odom'
+        msg.header.frame_id = 'map'
         msg.child_frame_id = 'base_link'
         msg.twist.twist.linear.x = v
         msg.twist.twist.linear.z = omega
@@ -193,26 +206,14 @@ class EPuck2Controller(Node):
         self.odometry_publisher.publish(msg)
 
         # Pack & publish transforms
-        tf_broadcaster = TransformBroadcaster(self)
         tf = TransformStamped()
-        tf.header.frame_id = 'odom'
+        tf.header.frame_id = 'map'
         tf.child_frame_id = 'base_link'
         tf.transform.translation.x = position[0]
         tf.transform.translation.y = position[1]
         tf.transform.translation.z = 0.0
         tf.transform.rotation = euler_to_quaternion(0, 0, angle)
-        tf_broadcaster.sendTransform(tf)
-
-        # Pack & publish transforms
-        tf_broadcaster = TransformBroadcaster(self)
-        tf = TransformStamped()
-        tf.header.frame_id = 'base_link'
-        tf.child_frame_id = 'laser_scanner'
-        tf.transform.translation.x = 0.0
-        tf.transform.translation.y = 0.0
-        tf.transform.translation.z = 0.0
-        tf.transform.rotation = euler_to_quaternion(0, 0, 0)
-        tf_broadcaster.sendTransform(tf)
+        self.tf_broadcaster.sendTransform(tf)
 
     def distance_callback(self):
         for key in self.sensors:
@@ -226,18 +227,19 @@ class EPuck2Controller(Node):
             msg.radiation_type = Range.INFRARED
             self.sensor_publishers[key].publish(msg)
 
+        # Max range of ToF sensor is 2m so we put it as maximum laser range. 
+        # Therefore, for all invalid ranges we put 0 so it get deleted by rviz
         msg = LaserScan()
         msg.header.frame_id = 'laser_scanner'
         msg.angle_min = 0.0
         msg.angle_max = 2 * pi
         msg.angle_increment = 15 * pi / 180.0
-        msg.scan_time = DISTANCE_PERIOD_MS / 1000
+        msg.scan_time = self.timestep / 1000
         msg.range_min = intensity_to_distance(
             self.sensors['ps0'].getMaxValue() - 20)
-        msg.range_max = intensity_to_distance(
-            self.sensors['ps0'].getMinValue() + 10)
+        msg.range_max = 2.0
         msg.ranges = [
-            0.0, #intensity_to_distance(self.sensors['tof'].getValue()),  # 0
+            self.sensors['tof'].getValue(),  # 0
             intensity_to_distance(self.sensors['ps7'].getValue()),  # 15
             0.0,                            # 30
             intensity_to_distance(self.sensors['ps6'].getValue()),  # 45

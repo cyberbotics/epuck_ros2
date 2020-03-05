@@ -4,6 +4,7 @@
 import sys
 import time
 from smbus2 import SMBus, i2c_msg
+import VL53L0X
 
 from .accelerometer import Accelerometer
 from .distanceSensor import DistanceSensor
@@ -32,6 +33,9 @@ class Robot(object):
 
     def __init__(self):
         self.time = 0
+        self.tof = VL53L0X.VL53L0X(i2c_bus=4,i2c_address=0x29)
+        self.tof.open()
+        self.tof.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
         self.bus = SMBus(I2C_CHANNEL)
         self.busFT903 = SMBus(FT903_I2C_CHANNEL)
         self.devices = {}
@@ -51,6 +55,7 @@ class Robot(object):
             self.devices[name] = Accelerometer(name)
         for name in Gyro.names:
             self.devices[name] = Gyro(name)
+        self.devices['tof'] = DistanceSensor('tof')
         print('Starting controller.')
 
     def step(self, duration, blocking=False):
@@ -66,6 +71,8 @@ class Robot(object):
             else:
                 self.time += 0.001 * duration
             self.previousTime = time.time()
+
+        self.devices['tof'].value = self.tof.get_distance() / 1000.0
 
         actuatorsData = []
         # left motor
@@ -128,6 +135,7 @@ class Robot(object):
         for i in range(2):
             self.devices[PositionSensor.names[i]].value = sensorsData[i * 2 + 41] + (sensorsData[i * 2 + 42] << 8)
             self.devices[PositionSensor.names[i]].value /= 159.23   # 159.23 = encoder_resolution/ (2 * pi)
+
         # communication with the pi-puck extension FT903 address
         mapping = [2, 1, 0]
         for i in range(3):
