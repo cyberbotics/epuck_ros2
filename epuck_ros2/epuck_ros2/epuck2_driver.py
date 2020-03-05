@@ -20,6 +20,8 @@ from sensor_msgs.msg import Range, Image, CameraInfo, Imu, LaserScan
 from tf2_ros import TransformBroadcaster
 from geometry_msgs.msg import Twist, Quaternion, TransformStamped
 from .webots_node import WebotsNode
+import time
+from builtin_interfaces.msg import Time
 
 
 WHEEL_DISTANCE = 0.05685
@@ -110,11 +112,11 @@ class EPuck2Controller(WebotsNode):
 
         sensor = self.robot.getDistanceSensor('tof')
         sensor.enable(self.timestep)
-        sensor_publisher = self.create_publisher(Range, '/distance/tof', 10)
+        sensor_publisher = self.create_publisher(Range, '/distance/tof', 1)
         self.sensors['tof'] = sensor
         self.sensor_publishers['tof'] = sensor_publisher
 
-        self.laser_publisher = self.create_publisher(LaserScan, '/laser', 10)
+        self.laser_publisher = self.create_publisher(LaserScan, '/scan', 1)
 
         # Steps...
         self.create_timer(self.timestep / 1000, self.step_callback)
@@ -123,7 +125,7 @@ class EPuck2Controller(WebotsNode):
         self.tf_broadcaster = TransformBroadcaster(self)
 
         self.tf_laser_scanner = TransformStamped()
-        self.tf_laser_scanner.header.frame_id = 'base_link'
+        self.tf_laser_scanner.header.frame_id = 'base_footprint'
         self.tf_laser_scanner.child_frame_id = 'laser_scanner'
         self.tf_laser_scanner.transform.translation.x = 0.0
         self.tf_laser_scanner.transform.translation.y = 0.0
@@ -132,12 +134,19 @@ class EPuck2Controller(WebotsNode):
 
     def step_callback(self):
         self.robot.step(self.timestep)
-        self.odometry_callback()
-        self.distance_callback()
-        self.publish_static_transforms()
 
-    def publish_static_transforms(self):
+        epoch = time.time()
+        stamp = Time()
+        stamp.sec = int(epoch)
+        stamp.nanosec = int((epoch - int(epoch)) * 1E9)
+
+        self.odometry_callback(stamp)
+        self.distance_callback(stamp)
+        self.publish_static_transforms(stamp)
+
+    def publish_static_transforms(self, stamp):
         # Pack & publish transforms
+        self.tf_laser_scanner.header.stamp = stamp
         self.tf_broadcaster.sendTransform(self.tf_laser_scanner)
 
     def cmd_vel_callback(self, twist):
@@ -149,12 +158,12 @@ class EPuck2Controller(WebotsNode):
         self.left_motor.setVelocity(left_velocity)
         self.right_motor.setVelocity(right_velocity)
 
-    def odometry_callback(self):
+    def odometry_callback(self, stamp):
         encoder_period_s = self.timestep / 1000.0
-
-        # Calculate velocities
         left_wheel_ticks = self.left_wheel_sensor.getValue()
         right_wheel_ticks = self.right_wheel_sensor.getValue()
+
+        # Calculate velocities
         v_left_rad = (left_wheel_ticks -
                       self.prev_left_wheel_ticks) / encoder_period_s
         v_right_rad = (right_wheel_ticks -
@@ -188,6 +197,15 @@ class EPuck2Controller(WebotsNode):
         angle = self.prev_angle + \
             (encoder_period_s / 6) * (k02 + 2 * (k12 + k22) + k32)
 
+        if (position[0]-self.prev_position[0])**2 + (position[1]-self.prev_position[1])**2 > 0.1**2:
+            print('Odometry error! Jump!')
+            print('Previous position: {}; New position {}'.format(self.prev_position, position))
+            print('Previous angle: {}; New angle {}'.format(self.prev_angle, angle))
+            print('v_left: {}; v_right: {}'.format(v_left, v_right))
+            print('prev_left_wheel_ticks: {}; left_wheel_ticks: {}'.format(self.prev_left_wheel_ticks, left_wheel_ticks))
+            print('prev_right_wheel_ticks: {}; right_wheel_ticks: {}'.format(self.prev_right_wheel_ticks, right_wheel_ticks))
+            print('Quaternion: {}'.format(euler_to_quaternion(0, 0, angle)))
+
         # Update variables
         self.prev_position = position.copy()
         self.prev_angle = angle
@@ -196,8 +214,9 @@ class EPuck2Controller(WebotsNode):
 
         # Pack & publish odometry
         msg = Odometry()
-        msg.header.frame_id = 'map'
-        msg.child_frame_id = 'base_link'
+        msg.header.stamp = stamp
+        msg.header.frame_id = 'odom'
+        msg.child_frame_id = 'base_footprint'
         msg.twist.twist.linear.x = v
         msg.twist.twist.linear.z = omega
         msg.pose.pose.position.x = position[0]
@@ -207,15 +226,16 @@ class EPuck2Controller(WebotsNode):
 
         # Pack & publish transforms
         tf = TransformStamped()
-        tf.header.frame_id = 'map'
-        tf.child_frame_id = 'base_link'
+        tf.header.stamp = stamp
+        tf.header.frame_id = 'odom'
+        tf.child_frame_id = 'base_footprint'
         tf.transform.translation.x = position[0]
         tf.transform.translation.y = position[1]
         tf.transform.translation.z = 0.0
         tf.transform.rotation = euler_to_quaternion(0, 0, angle)
         self.tf_broadcaster.sendTransform(tf)
 
-    def distance_callback(self):
+    def distance_callback(self, stamp):
         for key in self.sensors:
             msg = Range()
             msg.field_of_view = self.sensors[key].getAperture()
@@ -229,8 +249,10 @@ class EPuck2Controller(WebotsNode):
 
         # Max range of ToF sensor is 2m so we put it as maximum laser range. 
         # Therefore, for all invalid ranges we put 0 so it get deleted by rviz
+        
         msg = LaserScan()
         msg.header.frame_id = 'laser_scanner'
+        msg.header.stamp = stamp
         msg.angle_min = 0.0
         msg.angle_max = 2 * pi
         msg.angle_increment = 15 * pi / 180.0
@@ -263,6 +285,7 @@ class EPuck2Controller(WebotsNode):
             intensity_to_distance(self.sensors['ps1'].getValue()),  # 315
             0.0,                            # 330
             intensity_to_distance(self.sensors['ps0'].getValue()),  # 345
+            self.sensors['tof'].getValue(),  # 0
         ]
         self.laser_publisher.publish(msg)
 

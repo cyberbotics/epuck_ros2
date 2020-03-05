@@ -112,6 +112,7 @@ class Robot(object):
         checksum = 0
         for data in actuatorsData:
             checksum ^= data
+
         actuatorsData.append(checksum)
         if len(actuatorsData) != ACTUATORS_SIZE:
             sys.exit('Wrond actuator data size.')
@@ -121,19 +122,27 @@ class Robot(object):
         try:
             self.bus.i2c_rdwr(write, read)
         except:
-            pass 
+            return
         sensorsData = list(read)
+
+        checksum = 0
+        for data in sensorsData:
+            checksum ^= checksum ^ data
+        if sensorsData[SENSORS_SIZE - 1] != checksum:
+            print('Wrogn receiving checksum')
+            return
+
         if len(sensorsData) != SENSORS_SIZE:
             sys.exit('Wrond actuator data size.')
         # Read and assign DistanceSensor values
         for i in range(8):
-            self.devices[DistanceSensor.proximityNames[i]].value = sensorsData[i * 2] + (sensorsData[i * 2 + 1] << 8)
+            self.devices[DistanceSensor.proximityNames[i]].value = (sensorsData[i * 2] & 0x00FF) | ((sensorsData[i * 2 + 1] << 8) & 0xFF00)
         # Read and assign LightSensor values
         for i in range(8):
             self.devices[LightSensor.names[i]].value = sensorsData[i * 2 + 16] + (sensorsData[i * 2 + 17] << 8)
         # Read and assign PositionSensor values
         for i in range(2):
-            self.devices[PositionSensor.names[i]].value = sensorsData[i * 2 + 41] + (sensorsData[i * 2 + 42] << 8)
+            self.devices[PositionSensor.names[i]].value = (sensorsData[i * 2 + 41] & 0x00FF) | ((sensorsData[i * 2 + 42] << 8) & 0xFF00)
             self.devices[PositionSensor.names[i]].value /= 159.23   # 159.23 = encoder_resolution/ (2 * pi)
 
         # communication with the pi-puck extension FT903 address
@@ -157,7 +166,7 @@ class Robot(object):
             try:
                 self.bus.i2c_rdwr(read)
             except:
-                pass
+                return
             groundData = list(read)
             for i in range(3):
                 self.devices[DistanceSensor.groundNames[i]].value = (groundData[i * 2] << 8) + groundData[i * 2 + 1]
