@@ -24,10 +24,6 @@ import time
 from builtin_interfaces.msg import Time
 
 
-WHEEL_DISTANCE = 0.05685
-WHEEL_RADIUS = 0.02
-
-
 def euler_to_quaternion(roll, pitch, yaw):
     """
     Source: https://computergraphics.stackexchange.com/a/8229
@@ -74,7 +70,10 @@ class EPuck2Controller(WebotsNode):
     def __init__(self, name, args=None):
         super().__init__(name)
         self.robot = Robot()
-        self.timestep = 64
+
+        self.wheel_distance = self.declare_parameter("wheel_distance", 0.05685)
+        self.wheel_radius = self.declare_parameter("wheel_radius", 0.02)
+        self.timestep = self.declare_parameter("timestep", 64)
 
         # Init motors
         self.left_motor = self.robot.getMotor('left wheel motor')
@@ -95,8 +94,8 @@ class EPuck2Controller(WebotsNode):
             'left wheel sensor')
         self.right_wheel_sensor = self.robot.getPositionSensor(
             'right wheel sensor')
-        self.left_wheel_sensor.enable(self.timestep)
-        self.right_wheel_sensor.enable(self.timestep)
+        self.left_wheel_sensor.enable(self.timestep.value)
+        self.right_wheel_sensor.enable(self.timestep.value)
         self.odometry_publisher = self.create_publisher(Odometry, '/odom', 1)
 
         # Intialize distance sensors
@@ -104,14 +103,14 @@ class EPuck2Controller(WebotsNode):
         self.sensors = {}
         for i in range(8):
             sensor = self.robot.getDistanceSensor('ps{}'.format(i))
-            sensor.enable(self.timestep)
+            sensor.enable(self.timestep.value)
             sensor_publisher = self.create_publisher(
                 Range, '/distance/ps{}'.format(i), 10)
             self.sensors['ps{}'.format(i)] = sensor
             self.sensor_publishers['ps{}'.format(i)] = sensor_publisher
 
         sensor = self.robot.getDistanceSensor('tof')
-        sensor.enable(self.timestep)
+        sensor.enable(self.timestep.value)
         sensor_publisher = self.create_publisher(Range, '/distance/tof', 1)
         self.sensors['tof'] = sensor
         self.sensor_publishers['tof'] = sensor_publisher
@@ -119,7 +118,7 @@ class EPuck2Controller(WebotsNode):
         self.laser_publisher = self.create_publisher(LaserScan, '/scan', 1)
 
         # Steps...
-        self.create_timer(self.timestep / 1000, self.step_callback)
+        self.create_timer(self.timestep.value / 1000, self.step_callback)
 
         # Transforms
         self.tf_broadcaster = TransformBroadcaster(self)
@@ -133,7 +132,7 @@ class EPuck2Controller(WebotsNode):
         self.tf_laser_scanner.transform.rotation = euler_to_quaternion(0, 0, 0)
 
     def step_callback(self):
-        self.robot.step(self.timestep)
+        self.robot.step(self.timestep.value)
 
         epoch = time.time()
         stamp = Time()
@@ -152,14 +151,14 @@ class EPuck2Controller(WebotsNode):
     def cmd_vel_callback(self, twist):
         self.get_logger().info('Message received')
         left_velocity = (2.0 * twist.linear.x - twist.angular.z *
-                         WHEEL_DISTANCE) / (2.0 * WHEEL_RADIUS)
+                         self.wheel_distance.value) / (2.0 * self.wheel_radius.value)
         right_velocity = (2.0 * twist.linear.x + twist.angular.z *
-                          WHEEL_DISTANCE) / (2.0 * WHEEL_RADIUS)
+                          self.wheel_distance.value) / (2.0 * self.wheel_radius.value)
         self.left_motor.setVelocity(left_velocity)
         self.right_motor.setVelocity(right_velocity)
 
     def odometry_callback(self, stamp):
-        encoder_period_s = self.timestep / 1000.0
+        encoder_period_s = self.timestep.value / 1000.0
         left_wheel_ticks = self.left_wheel_sensor.getValue()
         right_wheel_ticks = self.right_wheel_sensor.getValue()
 
@@ -168,10 +167,10 @@ class EPuck2Controller(WebotsNode):
                       self.prev_left_wheel_ticks) / encoder_period_s
         v_right_rad = (right_wheel_ticks -
                        self.prev_right_wheel_ticks) / encoder_period_s
-        v_left = v_left_rad * WHEEL_RADIUS
-        v_right = v_right_rad * WHEEL_RADIUS
+        v_left = v_left_rad * self.wheel_radius.value
+        v_right = v_right_rad * self.wheel_radius.value
         v = (v_left + v_right) / 2
-        omega = (v_right - v_left) / WHEEL_DISTANCE
+        omega = (v_right - v_left) / self.wheel_distance.value
 
         # Calculate position & angle
         # Fourth order Runge - Kutta
@@ -199,11 +198,15 @@ class EPuck2Controller(WebotsNode):
 
         if (position[0]-self.prev_position[0])**2 + (position[1]-self.prev_position[1])**2 > 0.1**2:
             print('Odometry error! Jump!')
-            print('Previous position: {}; New position {}'.format(self.prev_position, position))
-            print('Previous angle: {}; New angle {}'.format(self.prev_angle, angle))
+            print('Previous position: {}; New position {}'.format(
+                self.prev_position, position))
+            print('Previous angle: {}; New angle {}'.format(
+                self.prev_angle, angle))
             print('v_left: {}; v_right: {}'.format(v_left, v_right))
-            print('prev_left_wheel_ticks: {}; left_wheel_ticks: {}'.format(self.prev_left_wheel_ticks, left_wheel_ticks))
-            print('prev_right_wheel_ticks: {}; right_wheel_ticks: {}'.format(self.prev_right_wheel_ticks, right_wheel_ticks))
+            print('prev_left_wheel_ticks: {}; left_wheel_ticks: {}'.format(
+                self.prev_left_wheel_ticks, left_wheel_ticks))
+            print('prev_right_wheel_ticks: {}; right_wheel_ticks: {}'.format(
+                self.prev_right_wheel_ticks, right_wheel_ticks))
             print('Quaternion: {}'.format(euler_to_quaternion(0, 0, angle)))
 
         # Update variables
@@ -247,45 +250,45 @@ class EPuck2Controller(WebotsNode):
             msg.radiation_type = Range.INFRARED
             self.sensor_publishers[key].publish(msg)
 
-        # Max range of ToF sensor is 2m so we put it as maximum laser range. 
+        # Max range of ToF sensor is 2m so we put it as maximum laser range.
         # Therefore, for all invalid ranges we put 0 so it get deleted by rviz
-        
+
         msg = LaserScan()
         msg.header.frame_id = 'laser_scanner'
         msg.header.stamp = stamp
         msg.angle_min = 0.0
         msg.angle_max = 2 * pi
         msg.angle_increment = 15 * pi / 180.0
-        msg.scan_time = self.timestep / 1000
+        msg.scan_time = self.timestep.value / 1000
         msg.range_min = intensity_to_distance(
             self.sensors['ps0'].getMaxValue() - 20)
         msg.range_max = 2.0
         msg.ranges = [
-            self.sensors['tof'].getValue(),  # 0
+            self.sensors['tof'].getValue(),                         # 0
             intensity_to_distance(self.sensors['ps7'].getValue()),  # 15
-            0.0,                            # 30
+            0.0,                                                    # 30
             intensity_to_distance(self.sensors['ps6'].getValue()),  # 45
-            0.0,                            # 60
-            0.0,                            # 75
+            0.0,                                                    # 60
+            0.0,                                                    # 75
             intensity_to_distance(self.sensors['ps5'].getValue()),  # 90
-            0.0,                            # 105
-            0.0,                            # 120
-            0.0,                            # 135
+            0.0,                                                    # 105
+            0.0,                                                    # 120
+            0.0,                                                    # 135
             intensity_to_distance(self.sensors['ps4'].getValue()),  # 150
-            0.0,                            # 165
-            0.0,                            # 180
-            0.0,                            # 195
+            0.0,                                                    # 165
+            0.0,                                                    # 180
+            0.0,                                                    # 195
             intensity_to_distance(self.sensors['ps3'].getValue()),  # 210
-            0.0,                            # 225
-            0.0,                            # 240
-            0.0,                            # 255
+            0.0,                                                    # 225
+            0.0,                                                    # 240
+            0.0,                                                    # 255
             intensity_to_distance(self.sensors['ps2'].getValue()),  # 270
-            0.0,                            # 285
-            0.0,                            # 300
+            0.0,                                                    # 285
+            0.0,                                                    # 300
             intensity_to_distance(self.sensors['ps1'].getValue()),  # 315
-            0.0,                            # 330
+            0.0,                                                    # 330
             intensity_to_distance(self.sensors['ps0'].getValue()),  # 345
-            self.sensors['tof'].getValue(),  # 0
+            self.sensors['tof'].getValue(),                         # 0
         ]
         self.laser_publisher.publish(msg)
 

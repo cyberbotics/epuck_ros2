@@ -33,7 +33,7 @@ class Robot(object):
 
     def __init__(self):
         self.time = 0
-        self.tof = VL53L0X.VL53L0X(i2c_bus=4,i2c_address=0x29)
+        self.tof = VL53L0X.VL53L0X(i2c_bus=4, i2c_address=0x29)
         self.tof.open()
         self.tof.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
         self.bus = SMBus(I2C_CHANNEL)
@@ -76,11 +76,14 @@ class Robot(object):
 
         actuatorsData = []
         # left motor
-        leftSpeed = int(self.devices['left wheel motor'].getVelocity() / 0.0068)  # 0.00628 = (2 * pi) / encoder_resolution
+        # 0.00628 = (2 * pi) / encoder_resolution
+        leftSpeed = int(
+            self.devices['left wheel motor'].getVelocity() / 0.0068)
         actuatorsData.append(leftSpeed & 0xFF)
         actuatorsData.append((leftSpeed >> 8) & 0xFF)
         # right motor
-        rightSpeed = int(self.devices['right wheel motor'].getVelocity() / 0.0068)
+        rightSpeed = int(
+            self.devices['right wheel motor'].getVelocity() / 0.0068)
         actuatorsData.append(rightSpeed & 0xFF)
         actuatorsData.append((rightSpeed >> 8) & 0xFF)
         # speaker sound
@@ -91,20 +94,28 @@ class Robot(object):
                              (self.devices['led4'].value & 0x4) |
                              (self.devices['led6'].value & 0x8))
         # LED2 R/G/B
-        actuatorsData.append(int(((self.devices['led1'].value >> 16) & 0xFF) / 2.55))
-        actuatorsData.append(int(((self.devices['led1'].value >> 8) & 0xFF) / 2.55))
+        actuatorsData.append(
+            int(((self.devices['led1'].value >> 16) & 0xFF) / 2.55))
+        actuatorsData.append(
+            int(((self.devices['led1'].value >> 8) & 0xFF) / 2.55))
         actuatorsData.append(int((self.devices['led1'].value & 0xFF) / 2.55))
         # LED4 R/G/B
-        actuatorsData.append(int(((self.devices['led3'].value >> 16) & 0xFF) / 2.55))
-        actuatorsData.append(int(((self.devices['led3'].value >> 8) & 0xFF) / 2.55))
+        actuatorsData.append(
+            int(((self.devices['led3'].value >> 16) & 0xFF) / 2.55))
+        actuatorsData.append(
+            int(((self.devices['led3'].value >> 8) & 0xFF) / 2.55))
         actuatorsData.append(int((self.devices['led3'].value & 0xFF) / 2.55))
         # LED6 R/G/B
-        actuatorsData.append(int(((self.devices['led5'].value >> 16) & 0xFF) / 2.55))
-        actuatorsData.append(int(((self.devices['led5'].value >> 8) & 0xFF) / 2.55))
+        actuatorsData.append(
+            int(((self.devices['led5'].value >> 16) & 0xFF) / 2.55))
+        actuatorsData.append(
+            int(((self.devices['led5'].value >> 8) & 0xFF) / 2.55))
         actuatorsData.append(int((self.devices['led5'].value & 0xFF) / 2.55))
         # LED8 R/G/B
-        actuatorsData.append(int(((self.devices['led7'].value >> 16) & 0xFF) / 2.55))
-        actuatorsData.append(int(((self.devices['led7'].value >> 8) & 0xFF) / 2.55))
+        actuatorsData.append(
+            int(((self.devices['led7'].value >> 16) & 0xFF) / 2.55))
+        actuatorsData.append(
+            int(((self.devices['led7'].value >> 8) & 0xFF) / 2.55))
         actuatorsData.append(int((self.devices['led7'].value & 0xFF) / 2.55))
         # Settings
         actuatorsData.append(0)
@@ -136,14 +147,18 @@ class Robot(object):
             sys.exit('Wrond actuator data size.')
         # Read and assign DistanceSensor values
         for i in range(8):
-            self.devices[DistanceSensor.proximityNames[i]].value = (sensorsData[i * 2] & 0x00FF) | ((sensorsData[i * 2 + 1] << 8) & 0xFF00)
+            self.devices[DistanceSensor.proximityNames[i]].value = (
+                sensorsData[i * 2] & 0x00FF) | ((sensorsData[i * 2 + 1] << 8) & 0xFF00)
         # Read and assign LightSensor values
         for i in range(8):
-            self.devices[LightSensor.names[i]].value = sensorsData[i * 2 + 16] + (sensorsData[i * 2 + 17] << 8)
+            self.devices[LightSensor.names[i]].value = sensorsData[i *
+                                                                   2 + 16] + (sensorsData[i * 2 + 17] << 8)
         # Read and assign PositionSensor values
         for i in range(2):
-            self.devices[PositionSensor.names[i]].value = (sensorsData[i * 2 + 41] & 0x00FF) | ((sensorsData[i * 2 + 42] << 8) & 0xFF00)
-            self.devices[PositionSensor.names[i]].value /= 159.23   # 159.23 = encoder_resolution/ (2 * pi)
+            self.devices[PositionSensor.names[i]].value = (
+                sensorsData[i * 2 + 41] & 0x00FF) | ((sensorsData[i * 2 + 42] << 8) & 0xFF00)
+            # 159.23 = encoder_resolution/ (2 * pi)
+            self.devices[PositionSensor.names[i]].value /= 159.23
 
         # communication with the pi-puck extension FT903 address
         mapping = [2, 1, 0]
@@ -169,7 +184,8 @@ class Robot(object):
                 return
             groundData = list(read)
             for i in range(3):
-                self.devices[DistanceSensor.groundNames[i]].value = (groundData[i * 2] << 8) + groundData[i * 2 + 1]
+                self.devices[DistanceSensor.groundNames[i]].value = (
+                    groundData[i * 2] << 8) + groundData[i * 2 + 1]
         # communication with the i2c bus with the extension board address
         # if self.devices['accelerometer'].getSamplingPeriod() > 0 or self.devices['gyro'].getSamplingPeriod() > 0:
         # imuRead = i2c_msg.read(IMU_ADDR, IMU_SIZE)
