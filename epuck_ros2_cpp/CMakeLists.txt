@@ -18,6 +18,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(geometry_msgs REQUIRED)
 
 add_executable(controller src/controller.cpp)
 target_include_directories(controller PUBLIC
@@ -26,6 +27,7 @@ target_include_directories(controller PUBLIC
 
 ament_target_dependencies(controller
   rclcpp
+  geometry_msgs
   std_msgs
 )
 
