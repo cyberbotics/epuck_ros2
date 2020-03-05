@@ -112,9 +112,10 @@ private:
 
     if (publisher_raw->get_subscription_count() > 0)
     {
-      cv::Mat input_mat(captured_image.width, captured_image.height, CV_8U, captured_image.data);
+      cv::Mat input_mat(captured_image.height, captured_image.width, CV_8UC2, captured_image.data);
       cv::Mat output_mat;
-      cv::cvtColor(input_mat, output_mat, cv::COLOR_YUV2BGR_Y422);
+      // COLOR_YUV2BGR_Y422
+      cv::cvtColor(input_mat, output_mat, cv::COLOR_YUV2BGR_YUY2); 
 
       auto message = sensor_msgs::msg::Image();
       message.encoding = "rgb8";
