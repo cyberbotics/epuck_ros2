@@ -155,10 +155,14 @@ class Robot(object):
                                                                    2 + 16] + (sensorsData[i * 2 + 17] << 8)
         # Read and assign PositionSensor values
         for i in range(2):
-            self.devices[PositionSensor.names[i]].value = (
-                sensorsData[i * 2 + 41] & 0x00FF) | ((sensorsData[i * 2 + 42] << 8) & 0xFF00)
-            # 159.23 = encoder_resolution/ (2 * pi)
-            self.devices[PositionSensor.names[i]].value /= 159.23
+            val = (sensorsData[i * 2 + 41] & 0x00FF) | ((sensorsData[i * 2 + 42] << 8) & 0xFF00)
+
+            # Pythonic way to get signed 16bit integers :O
+            if val > 2**15:
+                val -= 2**16
+
+             # 159.23 = encoder_resolution/ (2 * pi)
+            self.devices[PositionSensor.names[i]].value = val / 159.23
 
         # communication with the pi-puck extension FT903 address
         mapping = [2, 1, 0]
