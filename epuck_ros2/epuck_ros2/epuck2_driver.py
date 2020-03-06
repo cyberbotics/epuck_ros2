@@ -22,6 +22,7 @@ from geometry_msgs.msg import Twist, Quaternion, TransformStamped
 from .webots_node import WebotsNode
 import time
 from builtin_interfaces.msg import Time
+from rcl_interfaces.msg import SetParametersResult
 
 
 def euler_to_quaternion(roll, pitch, yaw):
@@ -71,9 +72,13 @@ class EPuck2Controller(WebotsNode):
         super().__init__(name)
         self.robot = Robot()
 
-        self.wheel_distance = self.declare_parameter("wheel_distance", 0.05685)
-        self.wheel_radius = self.declare_parameter("wheel_radius", 0.02)
+        # Parameters
+        wheel_distance_param = self.declare_parameter("wheel_distance", 0.0552)
+        wheel_radius_param = self.declare_parameter("wheel_radius", 0.021)
         self.timestep = self.declare_parameter("timestep", 64)
+        self.wheel_radius = wheel_radius_param.value
+        self.wheel_distance = wheel_distance_param.value
+        self.set_parameters_callback(self.on_param_changed)
 
         # Init motors
         self.left_motor = self.robot.getMotor('left wheel motor')
@@ -86,10 +91,7 @@ class EPuck2Controller(WebotsNode):
         self.get_logger().info('EPuck Initialized')
 
         # Initialize odometry
-        self.prev_left_wheel_ticks = 0
-        self.prev_right_wheel_ticks = 0
-        self.prev_position = (0.0, 0.0)
-        self.prev_angle = 0.0
+        self.reset_odometry()
         self.left_wheel_sensor = self.robot.getPositionSensor(
             'left wheel sensor')
         self.right_wheel_sensor = self.robot.getPositionSensor(
@@ -131,6 +133,26 @@ class EPuck2Controller(WebotsNode):
         self.tf_laser_scanner.transform.translation.z = 0.0
         self.tf_laser_scanner.transform.rotation = euler_to_quaternion(0, 0, 0)
 
+    def reset_odometry(self):
+        self.prev_left_wheel_ticks = 0
+        self.prev_right_wheel_ticks = 0
+        self.prev_position = (0.0, 0.0)
+        self.prev_angle = 0.0
+
+    def on_param_changed(self, params):
+        result = SetParametersResult()
+        result.successful = True
+
+        for param in params:
+            if param.name == "wheel_radius":
+                self.reset_odometry()
+                self.wheel_radius = param.value
+            elif param.name == "wheel_distance":
+                self.reset_odometry()
+                self.wheel_distance = param.value
+
+        return result
+
     def step_callback(self):
         self.robot.step(self.timestep.value)
 
@@ -151,9 +173,9 @@ class EPuck2Controller(WebotsNode):
     def cmd_vel_callback(self, twist):
         self.get_logger().info('Message received')
         left_velocity = (2.0 * twist.linear.x - twist.angular.z *
-                         self.wheel_distance.value) / (2.0 * self.wheel_radius.value)
+                         self.wheel_distance) / (2.0 * self.wheel_radius)
         right_velocity = (2.0 * twist.linear.x + twist.angular.z *
-                          self.wheel_distance.value) / (2.0 * self.wheel_radius.value)
+                          self.wheel_distance) / (2.0 * self.wheel_radius)
         self.left_motor.setVelocity(left_velocity)
         self.right_motor.setVelocity(right_velocity)
 
@@ -167,10 +189,10 @@ class EPuck2Controller(WebotsNode):
                       self.prev_left_wheel_ticks) / encoder_period_s
         v_right_rad = (right_wheel_ticks -
                        self.prev_right_wheel_ticks) / encoder_period_s
-        v_left = v_left_rad * self.wheel_radius.value
-        v_right = v_right_rad * self.wheel_radius.value
+        v_left = v_left_rad * self.wheel_radius
+        v_right = v_right_rad * self.wheel_radius
         v = (v_left + v_right) / 2
-        omega = (v_right - v_left) / self.wheel_distance.value
+        omega = (v_right - v_left) / self.wheel_distance
 
         # Calculate position & angle
         # Fourth order Runge - Kutta
@@ -239,13 +261,15 @@ class EPuck2Controller(WebotsNode):
         self.tf_broadcaster.sendTransform(tf)
 
     def distance_callback(self, stamp):
+        distance_from_center = 0.035
+
         for key in self.sensors:
             msg = Range()
             msg.field_of_view = self.sensors[key].getAperture()
             msg.min_range = intensity_to_distance(
-                self.sensors[key].getMaxValue() - 8.2)
+                self.sensors[key].getMaxValue() - 8.2) + distance_from_center
             msg.max_range = intensity_to_distance(
-                self.sensors[key].getMinValue() + 3.3)
+                self.sensors[key].getMinValue() + 3.3) + distance_from_center
             msg.range = intensity_to_distance(self.sensors[key].getValue())
             msg.radiation_type = Range.INFRARED
             self.sensor_publishers[key].publish(msg)
@@ -261,8 +285,8 @@ class EPuck2Controller(WebotsNode):
         msg.angle_increment = 15 * pi / 180.0
         msg.scan_time = self.timestep.value / 1000
         msg.range_min = intensity_to_distance(
-            self.sensors['ps0'].getMaxValue() - 20)
-        msg.range_max = 2.0
+            self.sensors['ps0'].getMaxValue() - 20) + distance_from_center
+        msg.range_max = 1.0 + distance_from_center
         msg.ranges = [
             self.sensors['tof'].getValue(),                         # 0
             intensity_to_distance(self.sensors['ps7'].getValue()),  # 15
@@ -290,6 +314,10 @@ class EPuck2Controller(WebotsNode):
             intensity_to_distance(self.sensors['ps0'].getValue()),  # 345
             self.sensors['tof'].getValue(),                         # 0
         ]
+        for i in range(len(msg.ranges)):
+            if msg.ranges[i] != 0:
+                msg.ranges[i] += distance_from_center
+
         self.laser_publisher.publish(msg)
 
 
