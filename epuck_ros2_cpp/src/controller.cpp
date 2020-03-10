@@ -6,6 +6,7 @@
 #include <geometry_msgs/msg/twist.hpp>
 #include <geometry_msgs/msg/quaternion.hpp>
 #include <sensor_msgs/msg/laser_scan.hpp>
+#include <cmath>
 
 extern "C"
 {
@@ -15,8 +16,7 @@ extern "C"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <linux/i2c-dev.h> /* for I2C_SLAVE */
-//#include <linux/i2c.h>
+#include <linux/i2c-dev.h>
 #include <sys/ioctl.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -47,10 +47,10 @@ public:
     memset(msg_sensors, 0, MSG_SENSORS_SIZE);
 
     subscription = this->create_subscription<geometry_msgs::msg::Twist>("cmd_vel", 1, std::bind(&EPuckPublisher::on_cmd_vel_received, this, std::placeholders::_1));
-    laser_publisher = this->create_publisher<geometry_msgs::msg::Twist>("laser", 1);
-    
+    laser_publisher = this->create_publisher<sensor_msgs::msg::LaserScan>("laser", 1);
+
     timer = this->create_wall_timer(
-        chrono::millisecods(PERIOD_MS), std::bind(&EPuckPublisher::update_callback, this));
+        std::chrono::milliseconds(PERIOD_MS), std::bind(&EPuckPublisher::update_callback, this));
 
     RCLCPP_INFO(this->get_logger(), "EPuck Driver has been initialized");
   }
@@ -61,40 +61,43 @@ public:
   }
 
 private:
-  static double intensity_to_distance(double p_x) {
-    std::vector<std::vector<int>> vect = { 
-      {0, 4095},
-      {0.005, 2133.33},
-      {0.01, 1465.73},
-      {0.015, 601.46},
-      {0.02, 383.84},
-      {0.03, 234.93},
-      {0.04, 158.03},
-      {0.05, 120},
-      {0.06, 104.09},
-      {0.07, 67.19},
-      {0.1, 0.0}
-    };
-    for (int i = 0; i < table.size() - 1; i++) {
-        if (table[i][1] >= p_x and table[i+1][1] < p_x) {
-            b_x = table[i][1];
-            b_y = table[i][0];
-            a_x = table[i+1][1];
-            a_y = table[i+1][0];
-            p_y = ((b_y - a_y) / (b_x - a_x)) * (p_x - a_x) + a_y;
-            return p_y;
-        }
+  static float intensity_to_distance(float p_x)
+  {
+    std::vector<std::vector<float>> table = {
+        {0, 4095},
+        {0.005, 2133.33},
+        {0.01, 1465.73},
+        {0.015, 601.46},
+        {0.02, 383.84},
+        {0.03, 234.93},
+        {0.04, 158.03},
+        {0.05, 120},
+        {0.06, 104.09},
+        {0.07, 67.19},
+        {0.1, 0.0}};
+    for (int i = 0; i < table.size() - 1; i++)
+    {
+      if (table[i][1] >= p_x and table[i + 1][1] < p_x)
+      {
+        float b_x = table[i][1];
+        float b_y = table[i][0];
+        float a_x = table[i + 1][1];
+        float a_y = table[i + 1][0];
+        float p_y = ((b_y - a_y) / (b_x - a_x)) * (p_x - a_x) + a_y;
+        return p_y;
+      }
     }
-    return 0.1
-    }
+    return 100.0;
+  }
 
-  static geometry_msgs::msg::Quaternion::SharedPtr euler_to_quaternion(double roll, double pitch, double yaw) {
+  static geometry_msgs::msg::Quaternion::SharedPtr euler_to_quaternion(double roll, double pitch, double yaw)
+  {
     geometry_msgs::msg::Quaternion::SharedPtr q;
-    q->x = sin(roll/2) * cos(pitch/2) * cos(yaw/2) - cos(roll/2) * sin(pitch/2) * sin(yaw/2);
-    q->y = cos(roll/2) * sin(pitch/2) * cos(yaw/2) + sin(roll/2) * cos(pitch/2) * sin(yaw/2);
-    q->z = cos(roll/2) * cos(pitch/2) * sin(yaw/2) - sin(roll/2) * sin(pitch/2) * cos(yaw/2);
-    q->w = cos(roll/2) * cos(pitch/2) * cos(yaw/2) + sin(roll/2) * sin(pitch/2) * sin(yaw/2);
-    return q
+    q->x = sin(roll / 2) * cos(pitch / 2) * cos(yaw / 2) - cos(roll / 2) * sin(pitch / 2) * sin(yaw / 2);
+    q->y = cos(roll / 2) * sin(pitch / 2) * cos(yaw / 2) + sin(roll / 2) * cos(pitch / 2) * sin(yaw / 2);
+    q->z = cos(roll / 2) * cos(pitch / 2) * sin(yaw / 2) - sin(roll / 2) * sin(pitch / 2) * cos(yaw / 2);
+    q->w = cos(roll / 2) * cos(pitch / 2) * cos(yaw / 2) + sin(roll / 2) * sin(pitch / 2) * sin(yaw / 2);
+    return q;
   }
 
   void on_cmd_vel_received(const geometry_msgs::msg::Twist::SharedPtr msg)
@@ -113,76 +116,89 @@ private:
     msg_actuators[3] = (right_velocity_big >> 8) & 0xFF;
   }
 
-  void publish_distance_data() {
+  void publish_distance_data(rclcpp::Time &stamp)
+  {
+    const float distance_from_center = 0.035;
+    float dist[8];
     auto msg = sensor_msgs::msg::LaserScan();
-    msg.header.frame_id = "laser_scanner";
-    msg.angle_min = 0;
-    msg.angle_max = 2 * pi;
-    msg.angle_increment = 15 * pi / 180.0;
-    msg.scan_time = PERIOD_MS / 1000;
-    msg.range_min = 0.01;
-    msg.range_max = 0.1;
-    
-    double encoded_distances[8];
-    for (int i = 0; i < 8; i++) {
+
+    // Decode measurements
+    for (int i = 0; i < 8; i++)
+    {
       int distance_intensity = msg_sensors[i * 2] + (msg_sensors[i * 2 + 1] << 8);
-      double distance = EPuckPublisher::intensity_to_distance(distance_intensity);
-      encoded_distances[i] = distance;
+      float distance = EPuckPublisher::intensity_to_distance(distance_intensity) + distance_from_center;
+      dist[i] = distance;
     }
 
-    msg.ranges = std::vector<double>{
-      0.0, // intensity_to_distance(self.sensors['tof'].getValue()),  # 0
-      intensity_to_distance(encoded_distances[7]),  // 15
-      0.0,                            // 30
-      intensity_to_distance(encoded_distances[6]),  // 45
-      0.0,                            // 60
-      0.0,                            // 75
-      intensity_to_distance(encoded_distances[5]),  // 90
-      0.0,                            // 105
-      0.0,                            // 120
-      0.0,                            // 135
-      intensity_to_distance(encoded_distances[4]),  // 150
-      0.0,                            // 165
-      0.0,                            // 180
-      0.0,                            // 195
-      intensity_to_distance(encoded_distances[3]), // 210
-      0.0,                            // 225
-      0.0,                            // 240
-      0.0,                            // 255
-      intensity_to_distance(encoded_distances[2]),  // 270
-      0.0,                            // 285
-      0.0,                            // 300
-      intensity_to_distance(encoded_distances[1]),  // 315
-      0.0,                            // 330
-      intensity_to_distance(encoded_distances[0]),  // 345
-    }
+    // Create message
+    msg.header.frame_id = "laser_scanner";
+    msg.header.stamp = stamp;
+    msg.angle_min = -150 * M_PI / 180;
+    msg.angle_max = 150 * M_PI / 180;
+    msg.angle_increment = 15 * M_PI / 180.0;
+    msg.scan_time = PERIOD_MS / 1000;
+    msg.range_min = 0.005 + distance_from_center;
+    msg.range_max = 0.05 + distance_from_center;
+    msg.ranges = std::vector<float>{
+        dist[4],                               // -150
+        (3 / 4) * dist[4] + (1 / 4) * dist[5], // -135
+        (2 / 4) * dist[4] + (2 / 4) * dist[5], // -120
+        (1 / 4) * dist[4] + (3 / 4) * dist[5], // -105
+        dist[5],                               // -90
+        (2 / 3) * dist[5] + (1 / 3) * dist[6], // -75
+        (1 / 3) * dist[5] + (2 / 3) * dist[6], // -60
+        dist[6],                               // -45
+        (1 / 2) * dist[6] + (1 / 2) * dist[7], // -30
+        dist[7],                               // -15
+        (1 / 2) * dist[7] + (1 / 2) * dist[0], // dist['tof'],                          // 0
+        dist[0],                               // 15
+        (1 / 2) * dist[0] + (1 / 2) * dist[1], // 30
+        dist[1],                               // 45
+        (2 / 3) * dist[1] + (1 / 3) * dist[2], // 60
+        (1 / 3) * dist[1] + (2 / 3) * dist[2], // 75
+        dist[2],                               // 90
+        (3 / 4) * dist[2] + (1 / 4) * dist[3], // 105
+        (2 / 4) * dist[2] + (2 / 4) * dist[3], // 120
+        (1 / 4) * dist[2] + (3 / 4) * dist[3], // 135
+        dist[3],                               // 150
+    };
+
+    // Publish the message
+    laser_publisher->publish(msg);
   }
 
   void update_callback()
   {
     int status;
+    rclcpp::Time stamp;
 
+    // Main MCU
     status = ioctl(fh, I2C_SLAVE, 0x1F);
     assert(status >= 0);
 
+    // Main MCU: Write
     for (int i = 0; i < MSG_ACTUATORS_SIZE - 1; i++)
     {
       msg_actuators[MSG_ACTUATORS_SIZE - 1] ^= msg_actuators[i];
     }
-
     status = write(fh, msg_actuators, MSG_ACTUATORS_SIZE);
-    if (status != MSG_ACTUATORS_SIZE) {
+    if (status != MSG_ACTUATORS_SIZE)
+    {
       RCLCPP_INFO(this->get_logger(), "Error sending actuator commands");
       // close(fh);
       // fh = open("/dev/i2c-4", O_RDWR);
     }
 
+    // Main MCU: Read
     status = read(fh, msg_sensors, MSG_SENSORS_SIZE);
-    if (status != MSG_SENSORS_SIZE) {
+    if (status != MSG_SENSORS_SIZE)
+    {
       RCLCPP_INFO(this->get_logger(), "Error receiving sensor readings");
       // close(fh);
       // fh = open("/dev/i2c-4", O_RDWR);
     }
+
+    stamp = now();
 
     // int n = read(fh, &epuck_to_zero_buff[bytesRead], SENSORS_SIZE-bytesRead);
   }
