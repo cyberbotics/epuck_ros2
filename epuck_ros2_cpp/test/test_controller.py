@@ -8,9 +8,6 @@ import launch_testing.actions
 from geometry_msgs.msg import Twist
 
 
-prev_data = []
-
-
 def get_int16(bytearr):
     val = (bytearr[0] & 0x00FF) | ((bytearr[1] << 8) & 0xFF00)
     if val > 2**15:
@@ -57,9 +54,17 @@ def publish_twist(node, linear_x=0.0, linear_y=0.0, angular_z=0.0):
 
 
 def generate_test_description():
-    # launch_test src/epuck_ros2/epuck_ros2_cpp/test/test_controller.py
-    # Docs: https://github.com/ros2/launch/tree/master/launch_testing
-    # Example: https://github.com/ros2/launch_ros/blob/master/launch_testing_ros/test/examples/talker_listener_launch_test.py
+    """
+    To run the tests you can use `launch_test` directly as:
+    $ launch_test src/epuck_ros2/epuck_ros2_cpp/test/test_controller.py
+    or with `colcon`
+    $ colcon test --packages-select epuck_ros2_cpp
+
+    The testing procedure is based on `launch_test`:
+    https://github.com/ros2/launch/tree/master/launch_testing
+    and the following example has been used:
+    https://github.com/ros2/launch_ros/blob/master/launch_testing_ros/test/examples/talker_listener_launch_test.py 
+    """
 
     controller = launch_ros.actions.Node(
         package='epuck_ros2_cpp',
