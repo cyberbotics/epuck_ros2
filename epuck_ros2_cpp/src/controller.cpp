@@ -7,6 +7,7 @@
 #include <geometry_msgs/msg/quaternion.hpp>
 #include <sensor_msgs/msg/laser_scan.hpp>
 #include <cmath>
+#include <epuck_ros2_cpp/i2c_wrapper.hpp>
 
 extern "C"
 {
@@ -41,8 +42,8 @@ public:
   EPuckPublisher()
       : Node("pipuck_driver")
   {
-    fh = open("/dev/i2c-4", O_RDWR);
-    assert(fh != 0);
+    i2c_main = I2CWrapperTest("/dev/i2c-4");
+
     memset(msg_actuators, 0, MSG_ACTUATORS_SIZE);
     memset(msg_sensors, 0, MSG_SENSORS_SIZE);
 
@@ -173,39 +174,27 @@ private:
     rclcpp::Time stamp;
 
     // Main MCU
-    status = ioctl(fh, I2C_SLAVE, 0x1F);
+    status = i2c_main.set_address(0x1F);
     assert(status >= 0);
 
     // Main MCU: Write
     for (int i = 0; i < MSG_ACTUATORS_SIZE - 1; i++)
     {
-      msg_actuators[MSG_ACTUATORS_SIZE - 1] ^= msg_actuators[i];
-    }
-    status = write(fh, msg_actuators, MSG_ACTUATORS_SIZE);
-    if (status != MSG_ACTUATORS_SIZE)
-    {
-      RCLCPP_INFO(this->get_logger(), "Error sending actuator commands");
-      // close(fh);
-      // fh = open("/dev/i2c-4", O_RDWR);
+      // msg_actuators[MSG_ACTUATORS_SIZE - 1] ^= msg_actuators[i];
     }
 
-    // Main MCU: Read
-    status = read(fh, msg_sensors, MSG_SENSORS_SIZE);
+    i2c_main.write_data(msg_actuators, MSG_ACTUATORS_SIZE);
+    i2c_main.read_data(msg_sensors, MSG_SENSORS_SIZE);
     if (status != MSG_SENSORS_SIZE)
-    {
-      RCLCPP_INFO(this->get_logger(), "Error receiving sensor readings");
-      // close(fh);
-      // fh = open("/dev/i2c-4", O_RDWR);
-    }
 
-    stamp = now();
-
-    // int n = read(fh, &epuck_to_zero_buff[bytesRead], SENSORS_SIZE-bytesRead);
+      stamp = now();
   }
 
   rclcpp::TimerBase::SharedPtr timer;
   rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr laser_publisher;
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscription;
+
+  I2CWrapperTest i2c_main;
 
   int fh;
   char msg_actuators[MSG_ACTUATORS_SIZE];
