@@ -35,6 +35,27 @@ def read_i2c_data(idx=4):
     return {}
 
 
+def publish_twist(node, linear_x=0.0, linear_y=0.0, angular_z=0.0):
+    # Publish a message
+    pub = node.create_publisher(
+        Twist,
+        'cmd_vel',
+        1
+    )
+    msg = Twist()
+    msg.angular.x = 0.0
+    msg.angular.y = 0.0
+    msg.angular.z = angular_z
+    msg.linear.x = linear_x
+    msg.linear.y = linear_y
+    msg.linear.z = 0.0
+    pub.publish(msg)
+
+    # Wait a bit
+    time.sleep(0.1)
+    node.destroy_publisher(pub)
+
+
 def generate_test_description():
     # launch_test src/epuck_ros2/epuck_ros2_cpp/test/test_controller.py
     # Docs: https://github.com/ros2/launch/tree/master/launch_testing
@@ -67,26 +88,18 @@ class TestController(unittest.TestCase):
         self.node.destroy_node()
 
     def test_forward_velocity(self, launch_service, proc_output):
-        # Publish a message
-        pub = self.node.create_publisher(
-            Twist,
-            'cmd_vel',
-            1
-        )
-        msg = Twist()
-        msg.angular.x = 0.0
-        msg.angular.y = 0.0
-        msg.angular.z = 0.0
-        msg.linear.x = 0.02
-        msg.linear.y = 0.0
-        msg.linear.z = 0.0
-        pub.publish(msg)
-
-        # Wait a bit
-        time.sleep(0.1)
-        self.node.destroy_publisher(pub)
+        publish_twist(self.node, linear_x=0.02)
 
         # Check what has been written to I2C
         params = read_i2c_data()
         self.assertEqual(params['left_speed'], 147)
         self.assertEqual(params['right_speed'], 147)
+
+
+    def test_limits(self, launch_service, proc_output):
+        publish_twist(self.node, linear_x=1.0)
+
+        # Check what has been written to I2C
+        params = read_i2c_data()
+        self.assertEqual(params['left_speed'], 1108)
+        self.assertEqual(params['right_speed'], 1108)
