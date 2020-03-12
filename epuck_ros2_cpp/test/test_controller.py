@@ -133,7 +133,6 @@ def generate_test_description():
     and the following example:
     https://github.com/ros2/launch_ros/blob/master/launch_testing_ros/test/examples/talker_listener_launch_test.py.
     """
-
     controller = launch_ros.actions.Node(
         package='epuck_ros2_cpp',
         node_executable='controller',
