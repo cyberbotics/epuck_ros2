@@ -53,26 +53,41 @@ const std::vector<std::vector<float>> INFRARED_TABLE = {
 class EPuckPublisher : public rclcpp::Node
 {
 public:
-  EPuckPublisher()
+  EPuckPublisher(int argc, char *argv[])
       : Node("pipuck_driver")
   {
-    i2c_main = std::make_unique<I2CWrapperTest>("/dev/i2c-4");
+    // Parse arguments
+    std::string type = "hw";
+    for (int i = 1; i < argc; i++) {
+      if (strcmp(argv[i], "--type") == 0) {
+        i++;
+        type = argv[i];
+      }
+    }
 
+    // Create I2C object
+    if (type == "test") {
+      i2c_main = std::make_unique<I2CWrapperTest>("/dev/i2c-4");
+    } else {
+      i2c_main = std::make_unique<I2CWrapperHW>("/dev/i2c-4");
+    }
+
+    // Initialize the buffers
     std::fill(msg_actuators, msg_actuators + MSG_ACTUATORS_SIZE, 0);
     std::fill(msg_sensors, msg_sensors + MSG_SENSORS_SIZE, 0);
 
+    // Create subscirbers and publishers
     subscription = this->create_subscription<geometry_msgs::msg::Twist>("cmd_vel", 1, std::bind(&EPuckPublisher::on_cmd_vel_received, this, std::placeholders::_1));
     laser_publisher = this->create_publisher<sensor_msgs::msg::LaserScan>("laser", 1);
-
     for (int i = 0; i < 8; i++)
     {
       range_publisher[i] = this->create_publisher<sensor_msgs::msg::Range>("ps" + std::to_string(i), 1);
     }
-
     timer = this->create_wall_timer(
         std::chrono::milliseconds(PERIOD_MS), std::bind(&EPuckPublisher::update_callback, this));
 
     RCLCPP_INFO(this->get_logger(), "EPuck Driver has been initialized");
+    RCLCPP_INFO(this->get_logger(), "Driver mode: %s", type.c_str());
   }
 
   ~EPuckPublisher()
@@ -221,7 +236,7 @@ private:
 int main(int argc, char *argv[])
 {
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<EPuckPublisher>());
+  rclcpp::spin(std::make_shared<EPuckPublisher>(argc, argv));
   rclcpp::shutdown();
   return 0;
 }
