@@ -27,20 +27,16 @@ ACTUATOR_SIZE = 20
 DISTANCE_FROM_CENTER = 0.035
 
 
-def arr2int16(bytearr):
-    """
-    Little-endian formulation
-    """
-    val = (bytearr[0] & 0x00FF) | ((bytearr[1] << 8) & 0xFF00)
+def arr2int16(arr):
+    """Little-endian formulation."""
+    val = (arr[0] & 0x00FF) | ((arr[1] << 8) & 0xFF00)
     if val > 2**15:
         val -= 2**16
     return val
 
 
 def int162arr(val):
-    """
-    Little-endian formulation
-    """
+    """Little-endian formulation."""
     arr = [
         val & 0xFF,
         (val >> 8) & 0xFF
@@ -124,7 +120,9 @@ def publish_twist(node, linear_x=0.0, linear_y=0.0, angular_z=0.0):
 
 
 def generate_test_description():
-    '''
+    """
+    Launch decription configuration.
+
     To run the tests you can use either `launch_test` directly as:
     $ launch_test src/epuck_ros2/epuck_ros2_cpp/test/test_controller.py
     or `colcon`:
@@ -134,7 +132,7 @@ def generate_test_description():
     https://github.com/ros2/launch/tree/master/launch_testing
     and the following example:
     https://github.com/ros2/launch_ros/blob/master/launch_testing_ros/test/examples/talker_listener_launch_test.py.
-    '''
+    """
 
     controller = launch_ros.actions.Node(
         package='epuck_ros2_cpp',
