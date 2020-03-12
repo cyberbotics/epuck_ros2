@@ -1,3 +1,16 @@
+# Copyright 1996-2020 Cyberbotics Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import time
 import rclpy
@@ -56,7 +69,7 @@ def write_params_to_i2c(params, idx=4):
         # Distance sensors
         if key[:2] == 'ps':
             sid = int(key[2])
-            buffer[2*sid:2*sid+2] = int162arr(params[key])
+            buffer[2 * sid:2 * sid + 2] = int162arr(params[key])
 
     # Write the buffer
     for _ in range(3):
@@ -67,7 +80,8 @@ def write_params_to_i2c(params, idx=4):
         time.sleep(0.01)
 
 
-def check_topic_condition(node, topic_class, topic_name, condition, timeout_sec=2):
+def check_topic_condition(
+        node, topic_class, topic_name, condition, timeout_sec=2):
     msgs_rx = []
     sub = node.create_subscription(
         topic_class,
@@ -110,7 +124,7 @@ def publish_twist(node, linear_x=0.0, linear_y=0.0, angular_z=0.0):
 
 
 def generate_test_description():
-    """
+    '''
     To run the tests you can use either `launch_test` directly as:
     $ launch_test src/epuck_ros2/epuck_ros2_cpp/test/test_controller.py
     or `colcon`:
@@ -119,8 +133,8 @@ def generate_test_description():
     The testing procedure is based on `launch_test`:
     https://github.com/ros2/launch/tree/master/launch_testing
     and the following example:
-    https://github.com/ros2/launch_ros/blob/master/launch_testing_ros/test/examples/talker_listener_launch_test.py 
-    """
+    https://github.com/ros2/launch_ros/blob/master/launch_testing_ros/test/examples/talker_listener_launch_test.py.
+    '''
 
     controller = launch_ros.actions.Node(
         package='epuck_ros2_cpp',
@@ -167,9 +181,15 @@ class TestController(unittest.TestCase):
         # Check what has been written to I2C
         params, _ = read_params_from_i2c()
         self.assertEqual(
-            params['left_speed'], 147, 'Left wheel speed of 0.02 should correspond to 147 over I2C')
-        self.assertEqual(params['right_speed'], 147,
-                         'Right wheel speed of 0.02 should correspond to 147 over I2C')
+            params['left_speed'],
+            147,
+            'Left wheel speed of 0.02 should correspond to 147 over I2C'
+        )
+        self.assertEqual(
+            params['right_speed'],
+            147,
+            'Right wheel speed of 0.02 should correspond to 147 over I2C'
+        )
 
     def test_rotation(self, launch_service, proc_output):
         publish_twist(self.node, angular_z=-0.5)
@@ -191,26 +211,41 @@ class TestController(unittest.TestCase):
 
     def test_distance_sensors(self, launch_service, proc_output):
         write_params_to_i2c({'ps0': 120})
-        condition = check_topic_condition(self.node, Range, 'ps0', lambda msg: abs(
-            msg.range - 0.05 - DISTANCE_FROM_CENTER) < 1E-3)
+        condition = check_topic_condition(
+            self.node,
+            Range,
+            'ps0',
+            lambda msg: abs(msg.range - 0.05 - DISTANCE_FROM_CENTER) < 1E-3)
         self.assertTrue(
             condition, 'The node hasn\'t published any distance measurement')
 
         write_params_to_i2c({'ps1': 383})
-        condition = check_topic_condition(self.node, Range, 'ps1', lambda msg: abs(
-            msg.range - 0.02 - DISTANCE_FROM_CENTER) < 1E-3)
+        condition = check_topic_condition(
+            self.node,
+            Range,
+            'ps1',
+            lambda msg: abs(msg.range - 0.02 - DISTANCE_FROM_CENTER) < 1E-3
+        )
         self.assertTrue(
             condition, 'The node hasn\'t published any distance measurement')
 
     def test_laser_scan(self, launch_service, proc_output):
         write_params_to_i2c({'ps4': 120})
-        condition = check_topic_condition(self.node, LaserScan, 'laser', lambda msg: abs(
-            msg.ranges[0] - 0.05 - DISTANCE_FROM_CENTER) < 1E-3)
+        condition = check_topic_condition(
+            self.node,
+            LaserScan,
+            'laser',
+            lambda msg: abs(msg.ranges[0] - 0.05 -
+                            DISTANCE_FROM_CENTER) < 1E-3)
         self.assertTrue(
             condition, 'Sensor ps4 at -150 doesn\'t give a good results')
 
         write_params_to_i2c({'ps5': 120})
-        condition = check_topic_condition(self.node, LaserScan, 'laser', lambda msg: abs(
-            msg.ranges[4] - 0.05 - DISTANCE_FROM_CENTER) < 1E-3)
+        condition = check_topic_condition(
+            self.node,
+            LaserScan,
+            'laser',
+            lambda msg: abs(msg.ranges[4] - 0.05 - DISTANCE_FROM_CENTER) < 1E-3
+        )
         self.assertTrue(
             condition, 'Sensor ps5 at -90 doesn\'t give a good results')
