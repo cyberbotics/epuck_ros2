@@ -6,7 +6,7 @@ import launch_ros.actions
 import unittest
 import launch_testing.actions
 from geometry_msgs.msg import Twist
-from sensor_msgs.msg import Range
+from sensor_msgs.msg import Range, LaserScan
 
 
 SENSORS_SIZE = 47
@@ -55,7 +55,7 @@ def write_params_to_i2c(params, idx=4):
         # Distance sensors
         if key[:2] == 'ps':
             sid = int(key[2])
-            buffer[sid:sid+2] = int162arr(params[key])
+            buffer[2*sid:2*sid+2] = int162arr(params[key])
 
     # Write the buffer
     for _ in range(3):
@@ -174,3 +174,22 @@ class TestController(unittest.TestCase):
             msg.range - 0.05 - DISTANCE_FROM_CENTER) < 1E-3)
         self.assertTrue(
             condition, 'The node hasn\'t published any distance measurement')
+
+        write_params_to_i2c({'ps1': 383})
+        condition = check_topic_condition(self.node, Range, 'ps1', lambda msg: abs(
+            msg.range - 0.02 - DISTANCE_FROM_CENTER) < 1E-3)
+        self.assertTrue(
+            condition, 'The node hasn\'t published any distance measurement')
+
+    def test_laser_scan(self, launch_service, proc_output):
+        write_params_to_i2c({'ps4': 120})
+        condition = check_topic_condition(self.node, LaserScan, 'laser', lambda msg: abs(
+            msg.ranges[0] - 0.05 - DISTANCE_FROM_CENTER) < 1E-3)
+        self.assertTrue(
+            condition, 'Sensor ps4 at -150 doesn\'t give a good results')
+
+        write_params_to_i2c({'ps5': 120})
+        condition = check_topic_condition(self.node, LaserScan, 'laser', lambda msg: abs(
+            msg.ranges[4] - 0.05 - DISTANCE_FROM_CENTER) < 1E-3)
+        self.assertTrue(
+            condition, 'Sensor ps5 at -90 doesn\'t give a good results')
