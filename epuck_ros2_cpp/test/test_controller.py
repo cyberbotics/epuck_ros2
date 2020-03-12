@@ -173,12 +173,11 @@ class TestController(unittest.TestCase):
 
     def test_rotation(self, launch_service, proc_output):
         publish_twist(self.node, angular_z=-0.5)
-        
+
         # Check what has been written to I2C
         params, _ = read_params_from_i2c()
         self.assertEqual(params['left_speed'], -1 * params['right_speed'],
                          'The wheel should rotate in opposite direction')
-
 
     def test_limits(self, launch_service, proc_output):
         publish_twist(self.node, linear_x=1.0)

@@ -26,9 +26,7 @@ from rcl_interfaces.msg import SetParametersResult
 
 
 def euler_to_quaternion(roll, pitch, yaw):
-    """
-    Source: https://computergraphics.stackexchange.com/a/8229
-    """
+    ''' Source: https://computergraphics.stackexchange.com/a/8229. '''
     q = Quaternion()
     q.x = sin(roll/2) * cos(pitch/2) * cos(yaw/2) - \
         cos(roll/2) * sin(pitch/2) * sin(yaw/2)
@@ -61,11 +59,6 @@ def intensity_to_distance(p_x):
             return p_y
     return 0.0
 
-
-# echo 27 > /sys/class/gpio/export
-# echo out > /sys/class/gpio/gpio27/direction
-# echo 0 > /sys/class/gpio/gpio27/value
-# echo 1 > /sys/class/gpio/gpio27/value
 
 class EPuck2Controller(WebotsNode):
     def __init__(self, name, args=None):

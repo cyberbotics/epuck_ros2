@@ -1,9 +1,5 @@
-#ifndef I2C_WRAPPER_H
-#define I2C_WRAPPER_H
-
-#include <string>
-#include <iostream>
-#include <fstream>
+#ifndef EPUCK_ROS2_CPP__I2C_WRAPPER_HPP_
+#define EPUCK_ROS2_CPP__I2C_WRAPPER_HPP_
 
 extern "C"
 {
@@ -13,6 +9,11 @@ extern "C"
 #include <unistd.h>
 #include <sys/stat.h>
 }
+
+#include <string>
+#include <iostream>
+#include <fstream>
+
 
 class I2CWrapper
 {
