@@ -46,16 +46,13 @@ public:
     int read_data(char *buffer, int size)
     {
         std::fstream stream(base_filename + "_read", std::ios::in | std::ios::binary);
-        stream.write(buffer, size);
+        stream.read(buffer, size);
         stream.close();
         return size;
     };
 
     int write_data(char *buffer, int size)
     {
-        std::cout << "Writting data..." << base_filename + "_write" << std::endl;
-        std::cout.write(buffer, size);
-
         std::fstream stream;
         stream.open(base_filename + "_write", std::ios::out | std::ios::binary);
 

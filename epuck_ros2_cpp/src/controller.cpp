@@ -6,6 +6,7 @@
 #include <geometry_msgs/msg/twist.hpp>
 #include <geometry_msgs/msg/quaternion.hpp>
 #include <sensor_msgs/msg/laser_scan.hpp>
+#include <sensor_msgs/msg/range.hpp>
 #include <cmath>
 #include <epuck_ros2_cpp/i2c_wrapper.hpp>
 
@@ -35,6 +36,7 @@ using namespace std::chrono_literals;
 
 const double WHEEL_DISTANCE = 0.05685;
 const double WHEEL_RADIUS = 0.02;
+const float SENSOR_DIST_FROM_CENTER = 0.035;
 
 class EPuckPublisher : public rclcpp::Node
 {
@@ -50,6 +52,10 @@ public:
     subscription = this->create_subscription<geometry_msgs::msg::Twist>("cmd_vel", 1, std::bind(&EPuckPublisher::on_cmd_vel_received, this, std::placeholders::_1));
     laser_publisher = this->create_publisher<sensor_msgs::msg::LaserScan>("laser", 1);
 
+    for (int i = 0; i < 8; i++) {
+      range_publisher[i] = this->create_publisher<sensor_msgs::msg::Range>("ps" + std::to_string(i), 1);
+    }
+
     timer = this->create_wall_timer(
         std::chrono::milliseconds(PERIOD_MS), std::bind(&EPuckPublisher::update_callback, this));
 
@@ -62,7 +68,7 @@ public:
   }
 
 private:
-  static float intensity_to_distance(float p_x)
+  static float intensity_to_distance(int p_x)
   {
     std::vector<std::vector<float>> table = {
         {0, 4095},
@@ -78,7 +84,7 @@ private:
         {0.1, 0.0}};
     for (int i = 0; i < table.size() - 1; i++)
     {
-      if (table[i][1] >= p_x and table[i + 1][1] < p_x)
+      if (table[i][1] >= p_x && table[i + 1][1] < p_x)
       {
         float b_x = table[i][1];
         float b_y = table[i][0];
@@ -119,27 +125,25 @@ private:
 
   void publish_distance_data(rclcpp::Time &stamp)
   {
-    const float distance_from_center = 0.035;
-    float dist[8];
-    auto msg = sensor_msgs::msg::LaserScan();
-
     // Decode measurements
+    float dist[8];
     for (int i = 0; i < 8; i++)
     {
       int distance_intensity = msg_sensors[i * 2] + (msg_sensors[i * 2 + 1] << 8);
-      float distance = EPuckPublisher::intensity_to_distance(distance_intensity) + distance_from_center;
+      float distance = EPuckPublisher::intensity_to_distance(distance_intensity) + SENSOR_DIST_FROM_CENTER;
       dist[i] = distance;
     }
 
-    // Create message
+    // Create LaserScan message
+    auto msg = sensor_msgs::msg::LaserScan();
     msg.header.frame_id = "laser_scanner";
     msg.header.stamp = stamp;
     msg.angle_min = -150 * M_PI / 180;
     msg.angle_max = 150 * M_PI / 180;
     msg.angle_increment = 15 * M_PI / 180.0;
     msg.scan_time = PERIOD_MS / 1000;
-    msg.range_min = 0.005 + distance_from_center;
-    msg.range_max = 0.05 + distance_from_center;
+    msg.range_min = 0.005 + SENSOR_DIST_FROM_CENTER;
+    msg.range_max = 0.05 + SENSOR_DIST_FROM_CENTER;
     msg.ranges = std::vector<float>{
         dist[4],                               // -150
         (3 / 4) * dist[4] + (1 / 4) * dist[5], // -135
@@ -163,9 +167,19 @@ private:
         (1 / 4) * dist[2] + (3 / 4) * dist[3], // 135
         dist[3],                               // 150
     };
-
-    // Publish the message
     laser_publisher->publish(msg);
+
+    // Create Range messages
+    for (int i = 0; i < 8; i++) {
+      auto msg_range = sensor_msgs::msg::Range();
+      msg_range.header.stamp = stamp;
+      msg_range.header.frame_id = "ps" + std::to_string(i);
+      msg_range.radiation_type = sensor_msgs::msg::Range::INFRARED;
+      msg_range.min_range = 0.05 + SENSOR_DIST_FROM_CENTER;
+      msg_range.min_range = 0.005 + SENSOR_DIST_FROM_CENTER;
+      msg_range.range = dist[i];
+      range_publisher[i]->publish(msg_range);
+    }
   }
 
   void update_callback()
@@ -185,13 +199,14 @@ private:
 
     i2c_main.write_data(msg_actuators, MSG_ACTUATORS_SIZE);
     i2c_main.read_data(msg_sensors, MSG_SENSORS_SIZE);
-    if (status != MSG_SENSORS_SIZE)
 
-      stamp = now();
+    stamp = now();
+    publish_distance_data(stamp);
   }
 
   rclcpp::TimerBase::SharedPtr timer;
   rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr laser_publisher;
+  rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr range_publisher[9];
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscription;
 
   I2CWrapperTest i2c_main;
