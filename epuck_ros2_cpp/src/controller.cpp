@@ -131,7 +131,7 @@ private:
     int left_velocity_big = CLIP(left_velocity / 0.0068, -1108, 1108);
     int right_velocity_big = CLIP(right_velocity / 0.0068, -1108, 1108);
 
-    RCLCPP_INFO(this->get_logger(), "New velocity, left %d and right %d", left_velocity_big, left_velocity_big);
+    RCLCPP_INFO(this->get_logger(), "New velocity, left %d and right %d", left_velocity_big, right_velocity_big);
 
     msg_actuators[0] = left_velocity_big & 0xFF;
     msg_actuators[1] = (left_velocity_big >> 8) & 0xFF;
@@ -209,9 +209,9 @@ private:
     assert(status >= 0);
 
     // Main MCU: Write
-    for (int i = 0; i < MSG_ACTUATORS_SIZE - 1; i++)
-    {
-      // msg_actuators[MSG_ACTUATORS_SIZE - 1] ^= msg_actuators[i];
+    msg_actuators[MSG_ACTUATORS_SIZE - 1] = 0;
+    for (int i = 0; i < MSG_ACTUATORS_SIZE - 1; i++) {
+      msg_actuators[MSG_ACTUATORS_SIZE - 1] ^= msg_actuators[i];
     }
 
     i2c_main->write_data(msg_actuators, MSG_ACTUATORS_SIZE);
