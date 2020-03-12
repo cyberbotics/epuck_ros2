@@ -26,7 +26,7 @@ from rcl_interfaces.msg import SetParametersResult
 
 
 def euler_to_quaternion(roll, pitch, yaw):
-    ''' Source: https://computergraphics.stackexchange.com/a/8229. '''
+    """Source: https://computergraphics.stackexchange.com/a/8229."""
     q = Quaternion()
     q.x = sin(roll/2) * cos(pitch/2) * cos(yaw/2) - \
         cos(roll/2) * sin(pitch/2) * sin(yaw/2)
