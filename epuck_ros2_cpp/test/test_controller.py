@@ -34,21 +34,17 @@ def int162arr(val):
     return arr
 
 
-def get_params(buffer):
-    params = {}
-    params['left_speed'] = arr2int16(buffer[0:2])
-    params['right_speed'] = arr2int16(buffer[2:4])
-    return params
-
-
 def read_params_from_i2c(idx=4):
+    params = {}
     for _ in range(3):
         with open(f'/tmp/dev/i2c-{idx}_write', 'rb') as f:
-            data = list(f.read())
-            if len(data) > 0:
-                return get_params(data)
+            buffer = list(f.read())
+            if len(buffer) > 0:
+                params['left_speed'] = arr2int16(buffer[0:2])
+                params['right_speed'] = arr2int16(buffer[2:4])
+                return params
         time.sleep(0.01)
-    return {}
+    return params
 
 
 def write_params_to_i2c(params, idx=4):
@@ -68,6 +64,25 @@ def write_params_to_i2c(params, idx=4):
             if n_bytes == SENSORS_SIZE:
                 return
         time.sleep(0.01)
+
+
+def check_topic_condition(node, topic_class, topic_name, condition, timeout_sec=2):
+    msgs_rx = []
+    sub = node.create_subscription(
+        topic_class,
+        topic_name,
+        lambda msg: msgs_rx.append(msg),
+        1
+    )
+    end_time = time.time() + timeout_sec
+    while time.time() < end_time:
+        rclpy.spin_once(node, timeout_sec=0.1)
+        for msg in msgs_rx:
+            if condition(msg):
+                node.destroy_subscription(sub)
+                return True
+    node.destroy_subscription(sub)
+    return False
 
 
 def publish_twist(node, linear_x=0.0, linear_y=0.0, angular_z=0.0):
@@ -91,25 +106,6 @@ def publish_twist(node, linear_x=0.0, linear_y=0.0, angular_z=0.0):
     # Wait a bit
     time.sleep(0.1)
     node.destroy_publisher(pub)
-
-
-def check_topic_condition(node, topic_class, topic_name, condition, timeout_sec=2):
-    msgs_rx = []
-    sub = node.create_subscription(
-        topic_class,
-        topic_name,
-        lambda msg: msgs_rx.append(msg),
-        1
-    )
-    end_time = time.time() + timeout_sec
-    while time.time() < end_time:
-        rclpy.spin_once(node, timeout_sec=0.1)
-        for msg in msgs_rx:
-            if condition(msg):
-                node.destroy_subscription(sub)
-                return True
-    node.destroy_subscription(sub)
-    return False
 
 
 def generate_test_description():
