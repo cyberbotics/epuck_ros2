@@ -124,7 +124,8 @@ def generate_test_description():
     controller = launch_ros.actions.Node(
         package='epuck_ros2_cpp',
         node_executable='controller',
-        output='screen'
+        output='screen',
+        arguments=['--type', 'test']
     )
 
     return launch.LaunchDescription([
