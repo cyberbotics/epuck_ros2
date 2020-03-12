@@ -41,6 +41,7 @@ public:
         std::fstream stream(base_filename + "_ioctl", std::ios::out | std::ios::binary);
         stream << address << std::endl;
         stream.close();
+        return 1;
     };
 
     int read_data(char *buffer, int size)

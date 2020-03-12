@@ -1,6 +1,6 @@
 #include <chrono>
 #include <memory>
-
+#include <algorithm>
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <geometry_msgs/msg/twist.hpp>
@@ -28,15 +28,27 @@ extern "C"
 #define MSG_SENSORS_SIZE 47
 #define PERIOD_MS 64
 
-#define min(X, Y) (((X) < (Y)) ? (X) : (Y))
-#define max(X, Y) (((X) > (Y)) ? (X) : (Y))
-#define CLIP(VAL, MIN, MAX) max(min((MAX), (VAL)), (MIN))
+#define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
+#define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
+#define CLIP(VAL, MIN_VAL, MAX_VAL) MAX(MIN((MAX_VAL), (VAL)), (MIN_VAL))
 
 using namespace std::chrono_literals;
 
 const double WHEEL_DISTANCE = 0.05685;
 const double WHEEL_RADIUS = 0.02;
 const float SENSOR_DIST_FROM_CENTER = 0.035;
+const std::vector<std::vector<float>> INFRARED_TABLE = {
+    {0, 4095},
+    {0.005, 2133.33},
+    {0.01, 1465.73},
+    {0.015, 601.46},
+    {0.02, 383.84},
+    {0.03, 234.93},
+    {0.04, 158.03},
+    {0.05, 120},
+    {0.06, 104.09},
+    {0.07, 67.19},
+    {0.1, 0.0}};
 
 class EPuckPublisher : public rclcpp::Node
 {
@@ -44,15 +56,16 @@ public:
   EPuckPublisher()
       : Node("pipuck_driver")
   {
-    i2c_main = I2CWrapperTest("/dev/i2c-4");
+    i2c_main = std::make_unique<I2CWrapperTest>("/dev/i2c-4");
 
-    memset(msg_actuators, 0, MSG_ACTUATORS_SIZE);
-    memset(msg_sensors, 0, MSG_SENSORS_SIZE);
+    std::fill(msg_actuators, msg_actuators + MSG_ACTUATORS_SIZE, 0);
+    std::fill(msg_sensors, msg_sensors + MSG_SENSORS_SIZE, 0);
 
     subscription = this->create_subscription<geometry_msgs::msg::Twist>("cmd_vel", 1, std::bind(&EPuckPublisher::on_cmd_vel_received, this, std::placeholders::_1));
     laser_publisher = this->create_publisher<sensor_msgs::msg::LaserScan>("laser", 1);
 
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 8; i++)
+    {
       range_publisher[i] = this->create_publisher<sensor_msgs::msg::Range>("ps" + std::to_string(i), 1);
     }
 
@@ -70,26 +83,14 @@ public:
 private:
   static float intensity_to_distance(int p_x)
   {
-    std::vector<std::vector<float>> table = {
-        {0, 4095},
-        {0.005, 2133.33},
-        {0.01, 1465.73},
-        {0.015, 601.46},
-        {0.02, 383.84},
-        {0.03, 234.93},
-        {0.04, 158.03},
-        {0.05, 120},
-        {0.06, 104.09},
-        {0.07, 67.19},
-        {0.1, 0.0}};
-    for (int i = 0; i < table.size() - 1; i++)
+    for (unsigned int i = 0; i < INFRARED_TABLE.size() - 1; i++)
     {
-      if (table[i][1] >= p_x && table[i + 1][1] < p_x)
+      if (INFRARED_TABLE[i][1] >= p_x && INFRARED_TABLE[i + 1][1] < p_x)
       {
-        float b_x = table[i][1];
-        float b_y = table[i][0];
-        float a_x = table[i + 1][1];
-        float a_y = table[i + 1][0];
+        float b_x = INFRARED_TABLE[i][1];
+        float b_y = INFRARED_TABLE[i][0];
+        float a_x = INFRARED_TABLE[i + 1][1];
+        float a_y = INFRARED_TABLE[i + 1][0];
         float p_y = ((b_y - a_y) / (b_x - a_x)) * (p_x - a_x) + a_y;
         return p_y;
       }
@@ -170,7 +171,8 @@ private:
     laser_publisher->publish(msg);
 
     // Create Range messages
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 8; i++)
+    {
       auto msg_range = sensor_msgs::msg::Range();
       msg_range.header.stamp = stamp;
       msg_range.header.frame_id = "ps" + std::to_string(i);
@@ -188,7 +190,7 @@ private:
     rclcpp::Time stamp;
 
     // Main MCU
-    status = i2c_main.set_address(0x1F);
+    status = i2c_main->set_address(0x1F);
     assert(status >= 0);
 
     // Main MCU: Write
@@ -197,8 +199,8 @@ private:
       // msg_actuators[MSG_ACTUATORS_SIZE - 1] ^= msg_actuators[i];
     }
 
-    i2c_main.write_data(msg_actuators, MSG_ACTUATORS_SIZE);
-    i2c_main.read_data(msg_sensors, MSG_SENSORS_SIZE);
+    i2c_main->write_data(msg_actuators, MSG_ACTUATORS_SIZE);
+    i2c_main->read_data(msg_sensors, MSG_SENSORS_SIZE);
 
     stamp = now();
     publish_distance_data(stamp);
@@ -209,7 +211,7 @@ private:
   rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr range_publisher[9];
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscription;
 
-  I2CWrapperTest i2c_main;
+  std::unique_ptr<I2CWrapper> i2c_main;
 
   int fh;
   char msg_actuators[MSG_ACTUATORS_SIZE];
