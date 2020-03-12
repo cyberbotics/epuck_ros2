@@ -93,6 +93,25 @@ def publish_twist(node, linear_x=0.0, linear_y=0.0, angular_z=0.0):
     node.destroy_publisher(pub)
 
 
+def check_topic_condition(node, topic_class, topic_name, condition, timeout_sec=2):
+    msgs_rx = []
+    sub = node.create_subscription(
+        topic_class,
+        topic_name,
+        lambda msg: msgs_rx.append(msg),
+        1
+    )
+    end_time = time.time() + timeout_sec
+    while time.time() < end_time:
+        rclpy.spin_once(node, timeout_sec=0.1)
+        for msg in msgs_rx:
+            if condition(msg):
+                node.destroy_subscription(sub)
+                return True
+    node.destroy_subscription(sub)
+    return False
+
+
 def generate_test_description():
     """
     To run the tests you can use either `launch_test` directly as:
@@ -138,40 +157,24 @@ class TestController(unittest.TestCase):
 
         # Check what has been written to I2C
         params = read_params_from_i2c()
-        self.assertEqual(params['left_speed'], 147, 'Left wheel speed of 0.02 should correspond to 147 over I2C')
-        self.assertEqual(params['right_speed'], 147, 'Right wheel speed of 0.02 should correspond to 147 over I2C')
+        self.assertEqual(
+            params['left_speed'], 147, 'Left wheel speed of 0.02 should correspond to 147 over I2C')
+        self.assertEqual(params['right_speed'], 147,
+                         'Right wheel speed of 0.02 should correspond to 147 over I2C')
 
     def test_limits(self, launch_service, proc_output):
         publish_twist(self.node, linear_x=1.0)
 
         # Check what has been written to I2C
         params = read_params_from_i2c()
-        self.assertEqual(params['left_speed'], 1108, 'The speed should be in range of [-1108, 1108]')
-        self.assertEqual(params['right_speed'], 1108, 'The speed should be in range of [-1108, 1108]')
+        self.assertEqual(params['left_speed'], 1108,
+                         'The speed should be in range of [-1108, 1108]')
+        self.assertEqual(params['right_speed'], 1108,
+                         'The speed should be in range of [-1108, 1108]')
 
     def test_distance_sensors(self, launch_service, proc_output):
-        msgs_rx = []
-
         write_params_to_i2c({'ps0': 120})
-
-        sub = self.node.create_subscription(
-            Range,
-            '/ps0',
-            lambda msg: msgs_rx.append(msg),
-            1
-        )
-
-        measurement_found = False
-        end_time = time.time() + 2
-        while time.time() < end_time:
-            rclpy.spin_once(self.node, timeout_sec=0.1)
-            for msg in msgs_rx:
-                if abs(msg.range - 0.05 - DISTANCE_FROM_CENTER) < 1E-3:
-                    measurement_found = True
-                    break
-            if measurement_found:
-                break
-
-        self.assertTrue(measurement_found, 'The node hasn\'t published any distance measurement')
-            
-        
+        condition = check_topic_condition(self.node, Range, 'ps0', lambda msg: abs(
+            msg.range - 0.05 - DISTANCE_FROM_CENTER) < 1E-3)
+        self.assertTrue(
+            condition, 'The node hasn\'t published any distance measurement')
