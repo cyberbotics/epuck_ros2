@@ -22,6 +22,7 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     # Controller node
-    controller = Node(package='epuck_ros2', node_executable='epuck2_driver', output='screen')
+    controller = Node(package='epuck_ros2',
+                      node_executable='epuck2_driver', output='screen')
 
-    return LaunchDescription([ controller ])
+    return LaunchDescription([controller])

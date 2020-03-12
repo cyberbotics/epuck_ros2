@@ -58,17 +58,22 @@ public:
   {
     // Parse arguments
     std::string type = "hw";
-    for (int i = 1; i < argc; i++) {
-      if (strcmp(argv[i], "--type") == 0) {
+    for (int i = 1; i < argc; i++)
+    {
+      if (strcmp(argv[i], "--type") == 0)
+      {
         i++;
         type = argv[i];
       }
     }
 
     // Create I2C object
-    if (type == "test") {
+    if (type == "test")
+    {
       i2c_main = std::make_unique<I2CWrapperTest>("/dev/i2c-4");
-    } else {
+    }
+    else
+    {
       i2c_main = std::make_unique<I2CWrapperHW>("/dev/i2c-4");
     }
 
@@ -210,7 +215,8 @@ private:
 
     // Main MCU: Write
     msg_actuators[MSG_ACTUATORS_SIZE - 1] = 0;
-    for (int i = 0; i < MSG_ACTUATORS_SIZE - 1; i++) {
+    for (int i = 0; i < MSG_ACTUATORS_SIZE - 1; i++)
+    {
       msg_actuators[MSG_ACTUATORS_SIZE - 1] ^= msg_actuators[i];
     }
 

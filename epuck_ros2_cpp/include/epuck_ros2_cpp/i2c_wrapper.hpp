@@ -34,7 +34,7 @@ public:
         std::string folder = base_filename.substr(0, base_filename.find_last_of("/"));
         mkdir(folder.c_str(), 0777);
         std::cout << "Folder " << folder << " is created" << std::endl;
-    };
+    }
 
     int set_address(int address)
     {
@@ -42,7 +42,7 @@ public:
         stream << address << std::endl;
         stream.close();
         return 1;
-    };
+    }
 
     int read_data(char *buffer, int size)
     {
@@ -50,7 +50,7 @@ public:
         stream.read(buffer, size);
         stream.close();
         return size;
-    };
+    }
 
     int write_data(char *buffer, int size)
     {
@@ -60,7 +60,7 @@ public:
         stream.write(buffer, size);
         stream.close();
         return size;
-    };
+    }
 
 private:
     std::string base_filename;
@@ -79,22 +79,22 @@ public:
         {
             std::cout << "Cannot open file: " << device << std::endl;
         }
-    };
+    }
 
     int set_address(int address)
     {
         return ioctl(fh, I2C_SLAVE, address);
-    };
+    }
 
     int read_data(char *buffer, int size)
     {
         return read(fh, buffer, size);
-    };
+    }
 
     int write_data(char *buffer, int size)
     {
         return write(fh, buffer, size);
-    };
+    }
 
 private:
     int fh;

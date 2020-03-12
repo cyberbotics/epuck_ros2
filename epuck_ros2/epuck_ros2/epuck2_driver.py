@@ -16,7 +16,7 @@ import rclpy
 from math import pi, cos, sin
 from .controller import Robot
 from nav_msgs.msg import Odometry
-from sensor_msgs.msg import Range, Image, CameraInfo, Imu, LaserScan
+from sensor_msgs.msg import Range, LaserScan
 from tf2_ros import TransformBroadcaster
 from geometry_msgs.msg import Twist, Quaternion, TransformStamped
 from .webots_node import WebotsNode
@@ -217,19 +217,6 @@ class EPuck2Controller(WebotsNode):
         ]
         angle = self.prev_angle + \
             (encoder_period_s / 6) * (k02 + 2 * (k12 + k22) + k32)
-
-        if (position[0]-self.prev_position[0])**2 + (position[1]-self.prev_position[1])**2 > 0.1**2:
-            print('Odometry error! Jump!')
-            print('Previous position: {}; New position {}'.format(
-                self.prev_position, position))
-            print('Previous angle: {}; New angle {}'.format(
-                self.prev_angle, angle))
-            print('v_left: {}; v_right: {}'.format(v_left, v_right))
-            print('prev_left_wheel_ticks: {}; left_wheel_ticks: {}'.format(
-                self.prev_left_wheel_ticks, left_wheel_ticks))
-            print('prev_right_wheel_ticks: {}; right_wheel_ticks: {}'.format(
-                self.prev_right_wheel_ticks, right_wheel_ticks))
-            print('Quaternion: {}'.format(euler_to_quaternion(0, 0, angle)))
 
         # Update variables
         self.prev_position = position.copy()
