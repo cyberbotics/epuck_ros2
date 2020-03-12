@@ -10,6 +10,7 @@ from sensor_msgs.msg import Range, LaserScan
 
 
 SENSORS_SIZE = 47
+ACTUATOR_SIZE = 20
 DISTANCE_FROM_CENTER = 0.035
 
 
@@ -42,9 +43,9 @@ def read_params_from_i2c(idx=4):
             if len(buffer) > 0:
                 params['left_speed'] = arr2int16(buffer[0:2])
                 params['right_speed'] = arr2int16(buffer[2:4])
-                return params
+                return params, buffer
         time.sleep(0.01)
-    return params
+    return params, []
 
 
 def write_params_to_i2c(params, idx=4):
@@ -149,21 +150,41 @@ class TestController(unittest.TestCase):
     def tearDown(self):
         self.node.destroy_node()
 
+    def test_checksum(self, launch_service, proc_output):
+        publish_twist(self.node, angular_z=1.0)
+
+        _, buffer = read_params_from_i2c()
+        print(buffer)
+        checksum = 0
+        for i in range(ACTUATOR_SIZE - 1):
+            checksum ^= buffer[i]
+
+        self.assertEqual(checksum, buffer[ACTUATOR_SIZE - 1])
+
     def test_forward_velocity(self, launch_service, proc_output):
         publish_twist(self.node, linear_x=0.02)
 
         # Check what has been written to I2C
-        params = read_params_from_i2c()
+        params, _ = read_params_from_i2c()
         self.assertEqual(
             params['left_speed'], 147, 'Left wheel speed of 0.02 should correspond to 147 over I2C')
         self.assertEqual(params['right_speed'], 147,
                          'Right wheel speed of 0.02 should correspond to 147 over I2C')
 
+    def test_rotation(self, launch_service, proc_output):
+        publish_twist(self.node, angular_z=-0.5)
+        
+        # Check what has been written to I2C
+        params, _ = read_params_from_i2c()
+        self.assertEqual(params['left_speed'], -1 * params['right_speed'],
+                         'The wheel should rotate in opposite direction')
+
+
     def test_limits(self, launch_service, proc_output):
         publish_twist(self.node, linear_x=1.0)
 
         # Check what has been written to I2C
-        params = read_params_from_i2c()
+        params, _ = read_params_from_i2c()
         self.assertEqual(params['left_speed'], 1108,
                          'The speed should be in range of [-1108, 1108]')
         self.assertEqual(params['right_speed'], 1108,
