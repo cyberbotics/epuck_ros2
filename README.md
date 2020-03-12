@@ -1,4 +1,7 @@
 # epuck_ros2
+[![Build Status](https://travis-ci.com/cyberbotics/epuck_ros2.svg?branch=master)](https://travis-ci.com/cyberbotics/epuck_ros2)
+[![license - apache 2.0](https://img.shields.io/:license-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Version](https://img.shields.io/github/v/tag/cyberbotics/epuck_ros2?label=version)](http://wiki.ros.org/epuck_ros2)
 
 ## Acknowledgement
 
