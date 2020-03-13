@@ -108,11 +108,11 @@ private:
   {
     for (unsigned int i = 0; i < INFRARED_TABLE.size() - 1; i++) {
       if (INFRARED_TABLE[i][1] >= p_x && INFRARED_TABLE[i + 1][1] < p_x) {
-        float b_x = INFRARED_TABLE[i][1];
-        float b_y = INFRARED_TABLE[i][0];
-        float a_x = INFRARED_TABLE[i + 1][1];
-        float a_y = INFRARED_TABLE[i + 1][0];
-        float p_y = ((b_y - a_y) / (b_x - a_x)) * (p_x - a_x) + a_y;
+        const float b_x = INFRARED_TABLE[i][1];
+        const float b_y = INFRARED_TABLE[i][0];
+        const float a_x = INFRARED_TABLE[i + 1][1];
+        const float a_y = INFRARED_TABLE[i + 1][0];
+        const float p_y = ((b_y - a_y) / (b_x - a_x)) * (p_x - a_x) + a_y;
         return p_y;
       }
     }
@@ -136,15 +136,15 @@ private:
 
   void on_cmd_vel_received(const geometry_msgs::msg::Twist::SharedPtr msg)
   {
-    double left_velocity =
+    const double left_velocity =
       (2.0 * msg->linear.x - msg->angular.z * WHEEL_DISTANCE) /
       (2.0 * WHEEL_RADIUS);
-    double right_velocity =
+    const double right_velocity =
       (2.0 * msg->linear.x + msg->angular.z * WHEEL_DISTANCE) /
       (2.0 * WHEEL_RADIUS);
 
-    int left_velocity_big = CLIP(left_velocity / 0.0068, -1108, 1108);
-    int right_velocity_big = CLIP(right_velocity / 0.0068, -1108, 1108);
+    const int left_velocity_big = CLIP(left_velocity / 0.0068, -1108, 1108);
+    const int right_velocity_big = CLIP(right_velocity / 0.0068, -1108, 1108);
 
     RCLCPP_INFO(this->get_logger(), "New velocity, left %d and right %d",
       left_velocity_big, right_velocity_big);
@@ -160,7 +160,7 @@ private:
     // Decode measurements
     float dist[8];
     for (int i = 0; i < 8; i++) {
-      int distance_intensity =
+      const int distance_intensity =
         msg_sensors[i * 2] + (msg_sensors[i * 2 + 1] << 8);
       float distance =
         EPuckPublisher::intensity_to_distance(distance_intensity) +
