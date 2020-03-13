@@ -164,7 +164,7 @@ class EPuck2Controller(WebotsNode):
         self.tf_broadcaster.sendTransform(self.tf_laser_scanner)
 
     def cmd_vel_callback(self, twist):
-        self.get_logger().info('Message received')
+        self.get_logger().info('Twist message received')
         left_velocity = (2.0 * twist.linear.x - twist.angular.z *
                          self.wheel_distance) / (2.0 * self.wheel_radius)
         right_velocity = (2.0 * twist.linear.x + twist.angular.z *
