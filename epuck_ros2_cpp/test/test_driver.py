@@ -14,12 +14,17 @@
 
 import time
 import rclpy
+from math import pi
+import unittest
 import launch
 import launch_ros.actions
-import unittest
 import launch_testing.actions
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Range, LaserScan
+from nav_msgs.msg import Odometry
+from rcl_interfaces.srv import SetParameters
+from rclpy.parameter import ParameterType, ParameterValue
+from rcl_interfaces.msg._parameter import Parameter
 
 
 SENSORS_SIZE = 47
@@ -38,8 +43,8 @@ def arr2int16(arr):
 def int162arr(val):
     """Little-endian formulation."""
     arr = [
-        val & 0xFF,
-        (val >> 8) & 0xFF
+        int(val) & 0xFF,
+        (int(val) >> 8) & 0xFF
     ]
     return arr
 
@@ -66,6 +71,10 @@ def write_params_to_i2c(params, idx=4):
         if key[:2] == 'ps':
             sid = int(key[2])
             buffer[2 * sid:2 * sid + 2] = int162arr(params[key])
+        elif key == 'left_position':
+            buffer[41:43] = int162arr(params[key])
+        elif key == 'right_position':
+            buffer[43:45] = int162arr(params[key])
 
     # Write the buffer
     for _ in range(3):
@@ -117,6 +126,15 @@ def publish_twist(node, linear_x=0.0, linear_y=0.0, angular_z=0.0):
     # Wait a bit
     time.sleep(0.1)
     node.destroy_publisher(pub)
+
+
+def set_param(cli, name, value):
+    req = SetParameters.Request()
+    param_value = ParameterValue(
+        double_value=value, type=ParameterType.PARAMETER_DOUBLE)
+    param = Parameter(name=name, value=param_value)
+    req.parameters.append(param)
+    cli.call_async(req)
 
 
 def generate_test_description():
@@ -245,3 +263,33 @@ class TestController(unittest.TestCase):
         )
         self.assertTrue(
             condition, 'Sensor ps2 at -90 doesn\'t give a good results')
+
+    def test_odometry(self, launch_service, proc_output):
+        # This will restart odometry
+        # cli = self.node.create_client(SetParameters, 'pipuck_driver/set_parameters')
+        # cli.wait_for_service(timeout_sec=1.0)
+        # set_param(cli, 'wheel_distance', 0.05685)
+        # set_param(cli, 'wheel_radius', 0.02)
+
+        # Set odometry to I2C and verify
+        write_params_to_i2c({'left_position': 2000 / (2 * pi)})
+        write_params_to_i2c({'right_position': 2000 / (2 * pi)})
+        condition = check_topic_condition(
+            self.node,
+            Odometry,
+            'odom',
+            lambda msg: abs(msg.pose.pose.position.x > 0.01)
+        )
+        self.assertTrue(condition, 'Should move forward')
+
+        # Set odometry to I2C and verify
+        write_params_to_i2c({'left_position': 4000 / (2 * pi)})
+        write_params_to_i2c({'right_position': 4000 / (2 * pi)})
+        condition = check_topic_condition(
+            self.node,
+            Odometry,
+            'odom',
+            lambda msg: abs(msg.pose.pose.position.x > 0.02)
+        )
+        self.assertTrue(condition, 'Should move more forward')
+

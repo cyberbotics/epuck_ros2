@@ -44,32 +44,35 @@ extern "C"
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include "tf2_ros/static_transform_broadcaster.h"
 #include "tf2_ros/transform_broadcaster.h"
+#include "nav_msgs/msg/odometry.hpp"
 
 #define MSG_ACTUATORS_SIZE 20
 #define MSG_SENSORS_SIZE 47
 #define PERIOD_MS 64
+#define PERIOD_S (PERIOD_MS / 1000.0)
 #define OUT_OF_RANGE 0
+#define ENCODER_RESOLUTION 1000.0
 
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 #define CLIP(VAL, MIN_VAL, MAX_VAL) MAX(MIN((MAX_VAL), (VAL)), (MIN_VAL))
 
-const double WHEEL_DISTANCE = 0.05685;
-const double WHEEL_RADIUS = 0.02;
+const float DEFAULT_WHEEL_DISTANCE = 0.05685;
+const float DEFAULT_WHEEL_RADIUS = 0.02;
 const float SENSOR_DIST_FROM_CENTER = 0.035;
 const std::vector<std::vector<float>> INFRARED_TABLE =
     {{0, 4095}, {0.005, 2133.33}, {0.01, 1465.73}, {0.015, 601.46}, {0.02, 383.84}, {0.03, 234.93}, {0.04, 158.03}, {0.05, 120}, {0.06, 104.09}, {0.07, 67.19}, {0.1, 0.0}};
 const std::vector<double> DISTANCE_SENSOR_ANGLE = {
-    -15 * M_PI / 180,   // ps0
-    -45 * M_PI / 180,   // ps1
-    -90 * M_PI / 180,   // ps2
-    -150 * M_PI / 180,  // ps3
-    150 * M_PI / 180,   // ps4
-    90 * M_PI / 180,    // ps5
-    45 * M_PI / 180,    // ps6
-    15 * M_PI / 180,    // ps7
-    0 * M_PI / 180      // tof
-    };
+    -15 * M_PI / 180,  // ps0
+    -45 * M_PI / 180,  // ps1
+    -90 * M_PI / 180,  // ps2
+    -150 * M_PI / 180, // ps3
+    150 * M_PI / 180,  // ps4
+    90 * M_PI / 180,   // ps5
+    45 * M_PI / 180,   // ps6
+    15 * M_PI / 180,   // ps7
+    0 * M_PI / 180     // tof
+};
 
 class EPuckPublisher : public rclcpp::Node
 {
@@ -88,6 +91,14 @@ public:
       }
     }
 
+    wheel_distance = declare_parameter<float>("wheel_distance", DEFAULT_WHEEL_DISTANCE);
+    wheel_radius = declare_parameter<float>("wheel_radius", DEFAULT_WHEEL_RADIUS);
+    /*
+    callback_handler =
+      this->add_on_set_parameters_callback(std::bind(&EPuckPublisher::param_change_callback, this,
+        std::placeholders::_1));
+    */
+
     // Create I2C object
     if (type == "test")
     {
@@ -98,14 +109,16 @@ public:
       i2c_main = std::make_unique<I2CWrapperHW>("/dev/i2c-4");
     }
 
-    // Initialize the buffers
+    // Initialize the values
     std::fill(msg_actuators, msg_actuators + MSG_ACTUATORS_SIZE, 0);
     std::fill(msg_sensors, msg_sensors + MSG_SENSORS_SIZE, 0);
+    reset_odometry();
 
     // Create subscirbers and publishers
     subscription = this->create_subscription<geometry_msgs::msg::Twist>(
         "cmd_vel", 1, std::bind(&EPuckPublisher::on_cmd_vel_received, this, std::placeholders::_1));
     laser_publisher = this->create_publisher<sensor_msgs::msg::LaserScan>("laser", 1);
+    odometry_publisher = this->create_publisher<nav_msgs::msg::Odometry>("odom", 1);
     for (int i = 0; i < 8; i++)
     {
       range_publisher[i] = this->create_publisher<sensor_msgs::msg::Range>("ps" + std::to_string(
@@ -115,6 +128,9 @@ public:
     timer =
         this->create_wall_timer(std::chrono::milliseconds(PERIOD_MS),
                                 std::bind(&EPuckPublisher::update_callback, this));
+
+    // Dynamic tf broadcaster: Odometry
+    dynamic_broadcaster = std::make_unique<tf2_ros::TransformBroadcaster>(this);
 
     // Static tf broadcaster: Laser
     laser_broadcaster = std::make_unique<tf2_ros::StaticTransformBroadcaster>(this);
@@ -131,7 +147,9 @@ public:
     laser_transform.transform.translation.z = 0;
     laser_broadcaster->sendTransform(laser_transform);
 
-    for (int i = 0; i < 8; i++) {
+    // Static tf broadcaster: Range (infrared)
+    for (int i = 0; i < 8; i++)
+    {
       infrared_broadcasters[i] = std::make_unique<tf2_ros::StaticTransformBroadcaster>(this);
       geometry_msgs::msg::TransformStamped infrared_transform;
       infrared_transform.header.stamp = this->now();
@@ -143,7 +161,8 @@ public:
       infrared_transform.transform.translation.z = 0;
       infrared_broadcasters[i]->sendTransform(infrared_transform);
     }
-    
+
+    // Static tf broadcaster: Range (ToF)
     infrared_broadcasters[8] = std::make_unique<tf2_ros::StaticTransformBroadcaster>(this);
     geometry_msgs::msg::TransformStamped infrared_transform;
     infrared_transform.header.stamp = this->now();
@@ -162,6 +181,38 @@ public:
   ~EPuckPublisher() { close(fh); }
 
 private:
+  void reset_odometry() {
+    prev_left_wheel_ticks = 0;
+    prev_right_wheel_ticks = 0;
+    prev_position_x = 0;
+    prev_position_y = 0;
+    prev_angle = 0;
+  }
+
+  rcl_interfaces::msg::SetParametersResult param_change_callback(
+    std::vector<rclcpp::Parameter> parameters)
+  {
+    auto result = rcl_interfaces::msg::SetParametersResult();
+    result.successful = true;
+
+    for (auto parameter : parameters) {
+      if (parameter.get_name() == "wheel_distance") {
+        reset_odometry();
+        wheel_distance = (float)parameter.as_double();
+      }
+      else if (parameter.get_name() == "wheel_radius") {
+        reset_odometry();
+        wheel_radius = (float)parameter.as_double();
+      }
+
+      RCLCPP_INFO(this->get_logger(), "Parameter '%s' has changed to %s",
+        parameter.get_name().c_str(),
+        parameter.value_to_string().c_str());
+    }
+
+    return result;
+  }
+
   static float intensity_to_distance(int p_x)
   {
     for (unsigned int i = 0; i < INFRARED_TABLE.size() - 1; i++)
@@ -193,10 +244,10 @@ private:
 
   void on_cmd_vel_received(const geometry_msgs::msg::Twist::SharedPtr msg)
   {
-    const double left_velocity = (2.0 * msg->linear.x - msg->angular.z * WHEEL_DISTANCE) /
-                                 (2.0 * WHEEL_RADIUS);
-    const double right_velocity = (2.0 * msg->linear.x + msg->angular.z * WHEEL_DISTANCE) /
-                                  (2.0 * WHEEL_RADIUS);
+    const double left_velocity = (2.0 * msg->linear.x - msg->angular.z * wheel_distance) /
+                                 (2.0 * wheel_radius);
+    const double right_velocity = (2.0 * msg->linear.x + msg->angular.z * wheel_distance) /
+                                  (2.0 * wheel_radius);
 
     const int left_velocity_big = CLIP(left_velocity / 0.0068, -1108, 1108);
     const int right_velocity_big = CLIP(right_velocity / 0.0068, -1108, 1108);
@@ -272,6 +323,73 @@ private:
     }
   }
 
+  void publish_odometry_data(rclcpp::Time &stamp)
+  {
+    const int left_wheel_raw = (msg_sensors[41] & 0x00FF) | ((msg_sensors[42] << 8) & 0xFF00);
+    const int right_wheel_raw = (msg_sensors[43] & 0x00FF) | ((msg_sensors[44] << 8) & 0xFF00);
+    const float left_wheel_ticks = left_wheel_raw / (ENCODER_RESOLUTION / (2 * M_PI));
+    const float right_wheel_ticks = right_wheel_raw / (ENCODER_RESOLUTION / (2 * M_PI));
+
+    // Calculate velocities
+    const float v_left_rad = (left_wheel_ticks - this->prev_left_wheel_ticks) / PERIOD_S;
+    const float v_right_rad = (right_wheel_ticks - this->prev_right_wheel_ticks) / PERIOD_S;
+    const float v_left = v_left_rad * this->wheel_radius;
+    const float v_right = v_right_rad * this->wheel_radius;
+    const float v = (v_left + v_right) / 2;
+    const float omega = (v_right - v_left) / this->wheel_distance;
+
+    // Calculate position & angle
+    // Fourth order Runge - Kutta
+    // Reference: https://www.cs.cmu.edu/~16311/s07/labs/NXTLabs/Lab%203.html
+    const float k00 = v * cos(this->prev_angle);
+    const float k01 = v * sin(this->prev_angle);
+    const float k02 = omega;
+    const float k10 = v * cos(this->prev_angle + PERIOD_S * k02 / 2);
+    const float k11 = v * sin(this->prev_angle + PERIOD_S * k02 / 2);
+    const float k12 = omega;
+    const float k20 = v * cos(this->prev_angle + PERIOD_S * k12 / 2);
+    const float k21 = v * sin(this->prev_angle + PERIOD_S * k12 / 2);
+    const float k22 = omega;
+    const float k30 = v * cos(this->prev_angle + PERIOD_S * k22 / 2);
+    const float k31 = v * sin(this->prev_angle + PERIOD_S * k22 / 2);
+    const float k32 = omega;
+    const float position_x = this->prev_position_x + (PERIOD_S / 6) *
+                                                         (k00 + 2 * (k10 + k20) + k30);
+    const float position_y = this->prev_position_y + (PERIOD_S / 6) *
+                                                         (k01 + 2 * (k11 + k21) + k31);
+    const float angle = this->prev_angle + (PERIOD_S / 6) * (k02 + 2 * (k12 + k22) + k32);
+
+    // Update variables
+    this->prev_position_x = position_x;
+    this->prev_position_y = position_y;
+    this->prev_angle = angle;
+    this->prev_left_wheel_ticks = left_wheel_ticks;
+    this->prev_right_wheel_ticks = right_wheel_ticks;
+
+    // Pack & publish odometry
+    nav_msgs::msg::Odometry msg;
+    msg.header.stamp = stamp;
+    msg.header.frame_id = "odom";
+    msg.child_frame_id = "base_link";
+    msg.twist.twist.linear.x = v;
+    msg.twist.twist.linear.z = omega;
+    msg.pose.pose.position.x = position_x;
+    msg.pose.pose.position.y = position_y;
+    msg.pose.pose.orientation = euler_to_quaternion(0, 0, angle);
+    odometry_publisher->publish(msg);
+
+    // Pack & publish transforms
+    geometry_msgs::msg::TransformStamped tf;
+    tf.header.stamp = stamp;
+    tf.header.frame_id = "odom";
+    tf.child_frame_id = "base_link";
+    tf.transform.translation.x = position_x;
+    tf.transform.translation.y = position_y;
+    tf.transform.translation.z = 0.0;
+    tf.transform.rotation = euler_to_quaternion(0, 0, angle);
+    dynamic_broadcaster->sendTransform(tf);
+  }
+
   void update_callback()
   {
     int status;
@@ -293,14 +411,19 @@ private:
 
     stamp = now();
     publish_distance_data(stamp);
+    publish_odometry_data(stamp);
   }
+
+  OnSetParametersCallbackHandle::SharedPtr callback_handler;
 
   rclcpp::TimerBase::SharedPtr timer;
   rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr laser_publisher;
+  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odometry_publisher;
   rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr range_publisher[9];
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscription;
 
   std::unique_ptr<tf2_ros::StaticTransformBroadcaster> laser_broadcaster;
+  std::unique_ptr<tf2_ros::TransformBroadcaster> dynamic_broadcaster;
   std::unique_ptr<tf2_ros::StaticTransformBroadcaster> infrared_broadcasters[9];
 
   std::unique_ptr<I2CWrapper> i2c_main;
@@ -308,6 +431,14 @@ private:
   int fh;
   char msg_actuators[MSG_ACTUATORS_SIZE];
   char msg_sensors[MSG_SENSORS_SIZE];
+
+  float prev_left_wheel_ticks;
+  float prev_right_wheel_ticks;
+  float prev_angle;
+  float prev_position_x;
+  float prev_position_y;
+  float wheel_distance;
+  float wheel_radius;
 };
 
 int main(int argc, char *argv[])
