@@ -255,7 +255,7 @@ class TestController(unittest.TestCase):
         condition = check_topic_condition(
             self.node,
             LaserScan,
-            'laser',
+            'scan',
             lambda msg: abs(msg.ranges[0] - 0.05 -
                             DISTANCE_FROM_CENTER) < 1E-3)
         self.assertTrue(
@@ -265,7 +265,7 @@ class TestController(unittest.TestCase):
         condition = check_topic_condition(
             self.node,
             LaserScan,
-            'laser',
+            'scan',
             lambda msg: abs(msg.ranges[4] - 0.05 - DISTANCE_FROM_CENTER) < 1E-3
         )
         self.assertTrue(
