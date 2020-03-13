@@ -79,6 +79,10 @@ def write_params_to_i2c(params, idx=4):
         elif key == 'right_position':
             buffer[43:45] = int162arr(params[key])
 
+    buffer[SENSORS_SIZE - 1] = 0
+    for i in range(SENSORS_SIZE - 1):
+        buffer[SENSORS_SIZE - 1] ^= buffer[i]
+
     # Write the buffer
     for _ in range(3):
         with open(f'/tmp/dev/i2c-{idx}_read', 'wb') as f:

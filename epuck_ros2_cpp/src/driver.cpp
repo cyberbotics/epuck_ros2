@@ -392,26 +392,47 @@ private:
 
   void update_callback()
   {
-    int status;
+    int success;
+    int retry_count;
     rclcpp::Time stamp;
 
-    // Main MCU
-    status = i2c_main->set_address(0x1F);
-    assert(status >= 0);
-
-    // Main MCU: Write
-    msg_actuators[MSG_ACTUATORS_SIZE - 1] = 0;
-    for (int i = 0; i < MSG_ACTUATORS_SIZE - 1; i++)
-    {
-      msg_actuators[MSG_ACTUATORS_SIZE - 1] ^= msg_actuators[i];
+    // I2C: Set address
+    retry_count = 1;
+    success = 0;
+    while (! success && retry_count > 0) {
+      success = i2c_main->set_address(0x1F);
+      retry_count--;
     }
 
-    i2c_main->write_data(msg_actuators, MSG_ACTUATORS_SIZE);
-    i2c_main->read_data(msg_sensors, MSG_SENSORS_SIZE);
+    // I2C: Write/Read
+    retry_count = 3;
+    success = 0;
+    while (! success && retry_count > 0) {
+      // Write
+      msg_actuators[MSG_ACTUATORS_SIZE - 1] = 0;
+      for (int i = 0; i < MSG_ACTUATORS_SIZE - 1; i++)
+      {
+        msg_actuators[MSG_ACTUATORS_SIZE - 1] ^= msg_actuators[i];
+      }
+      success = i2c_main->write_data(msg_actuators, MSG_ACTUATORS_SIZE);
+
+      // Read
+      success = i2c_main->read_data(msg_sensors, MSG_SENSORS_SIZE);
+      char checksum = 0;
+      for (int i = 0; i < MSG_SENSORS_SIZE - 1; i++)
+      {
+        checksum ^= msg_sensors[i];
+      }
+      success &= (checksum == msg_sensors[MSG_SENSORS_SIZE - 1]);
+
+      retry_count--;
+    }
 
     stamp = now();
     publish_distance_data(stamp);
-    publish_odometry_data(stamp);
+    if (success) {
+      publish_odometry_data(stamp);
+    }
   }
 
   OnSetParametersCallbackHandle::SharedPtr callback_handler;
