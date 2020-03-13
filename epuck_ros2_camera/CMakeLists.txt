@@ -33,7 +33,7 @@ set(MMAL_LIBS
   /opt/vc/lib/libvchostif.a
 )
 
-add_executable(camera 
+add_executable(camera
   src/camera.cpp
   src/pipuck_v4l2.c
   src/pipuck_jpeg.c
@@ -56,7 +56,7 @@ ament_target_dependencies(camera
   OpenCV
 )
 
-target_link_libraries(camera 
+target_link_libraries(camera
   ${MMAL_LIBS}
 )
 

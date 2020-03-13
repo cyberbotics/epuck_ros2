@@ -20,15 +20,16 @@
 #define PIPUCK_IMAGE_ENCODING_BGR24 MMAL_ENCODING_BGR24
 #define PIPUCK_IMAGE_ENCODING_YUYV MMAL_ENCODING_YUYV
 
-typedef struct _pipuck_image_t {
+typedef struct _pipuck_image_t
+{
   int width;
   int height;
   int size;
-  char *data;
+  char * data;
   int encoding;
   int quality;
 } pipuck_image_t;
 
-void pipuck_image_init(pipuck_image_t *image);
+void pipuck_image_init(pipuck_image_t * image);
 
 #endif
