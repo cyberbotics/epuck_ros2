@@ -281,7 +281,7 @@ private:
     msg.angle_min = -150 * M_PI / 180;
     msg.angle_max = 150 * M_PI / 180;
     msg.angle_increment = 15 * M_PI / 180.0;
-    msg.scan_time = PERIOD_MS / 1000;
+    msg.scan_time = PERIOD_S;
     msg.range_min = 0.005 + SENSOR_DIST_FROM_CENTER;
     msg.range_max = 0.05 + SENSOR_DIST_FROM_CENTER;
     msg.ranges = std::vector<float>{
@@ -414,10 +414,10 @@ private:
       {
         msg_actuators[MSG_ACTUATORS_SIZE - 1] ^= msg_actuators[i];
       }
-      success = i2c_main->write_data(msg_actuators, MSG_ACTUATORS_SIZE);
+      success = (i2c_main->write_data(msg_actuators, MSG_ACTUATORS_SIZE) == MSG_ACTUATORS_SIZE);
 
       // Read
-      success = i2c_main->read_data(msg_sensors, MSG_SENSORS_SIZE);
+      success &= (i2c_main->read_data(msg_sensors, MSG_SENSORS_SIZE) == MSG_SENSORS_SIZE);
       char checksum = 0;
       for (int i = 0; i < MSG_SENSORS_SIZE - 1; i++)
       {
