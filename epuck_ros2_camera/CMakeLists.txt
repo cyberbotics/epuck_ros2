@@ -34,7 +34,7 @@ set(MMAL_LIBS
 )
 
 add_executable(camera 
-	src/camera.cpp
+  src/camera.cpp
   src/pipuck_v4l2.c
   src/pipuck_jpeg.c
   src/pipuck_ov7670.c
