@@ -1,7 +1,0 @@
-/build
-/install
-/log
-.eggs/
-
-*.pyc
-__pycache__/

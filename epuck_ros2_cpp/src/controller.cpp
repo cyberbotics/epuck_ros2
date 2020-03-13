@@ -227,9 +227,8 @@ private:
 
     // Main MCU: Write
     msg_actuators[MSG_ACTUATORS_SIZE - 1] = 0;
-    for (int i = 0; i < MSG_ACTUATORS_SIZE - 1; i++) {
+    for (int i = 0; i < MSG_ACTUATORS_SIZE - 1; i++)
       msg_actuators[MSG_ACTUATORS_SIZE - 1] ^= msg_actuators[i];
-    }
 
     i2c_main->write_data(msg_actuators, MSG_ACTUATORS_SIZE);
     i2c_main->read_data(msg_sensors, MSG_SENSORS_SIZE);
