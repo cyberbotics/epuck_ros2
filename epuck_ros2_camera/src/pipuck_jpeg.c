@@ -1,3 +1,19 @@
+// Copyright 2020 Cyberbotics
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "epuck_ros2_camera/pipuck_jpeg.h"
+
 #include <assert.h>
 #include <stdio.h>
 #include <bcm_host.h>
@@ -9,10 +25,9 @@
 #include <interface/mmal/util/mmal_util_params.h>
 #include <interface/mmal/util/mmal_default_components.h>
 #include <interface/mmal/util/mmal_connection.h>
-#include "epuck_ros2_camera/pipuck_jpeg.h"
 
-#define min(X, Y) (((X) < (Y)) ? (X) : (Y))
-#define max(X, Y) (((X) > (Y)) ? (X) : (Y))
+#define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
+#define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 
 static MMAL_COMPONENT_T *encoder;
 static MMAL_STATUS_T status;
@@ -127,7 +142,7 @@ int pipuck_jpeg_encode(pipuck_image_t *input_image, pipuck_image_t *output_image
         // Input frames
         if ((buffer = mmal_queue_get(pool_in->queue)) != NULL)
         {
-            buffer->length = max(0, min(buffer->alloc_size, input_image->size - sent_bytes));
+            buffer->length = MAX(0, MIN(buffer->alloc_size, input_image->size - sent_bytes));
             buffer->offset = 0;
             buffer->pts = MMAL_TIME_UNKNOWN;
             buffer->dts = MMAL_TIME_UNKNOWN;

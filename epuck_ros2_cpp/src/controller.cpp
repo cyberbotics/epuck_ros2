@@ -179,27 +179,27 @@ private:
     msg.range_min = 0.005 + SENSOR_DIST_FROM_CENTER;
     msg.range_max = 0.05 + SENSOR_DIST_FROM_CENTER;
     msg.ranges = std::vector<float>{
-      dist[4],                                                                     // -150
+      dist[4],                                         // -150
       (3 / 4) * dist[4] + (1 / 4) * dist[5],           // -135
       (2 / 4) * dist[4] + (2 / 4) * dist[5],           // -120
       (1 / 4) * dist[4] + (3 / 4) * dist[5],           // -105
-      dist[5],                                                                     // -90
+      dist[5],                                         // -90
       (2 / 3) * dist[5] + (1 / 3) * dist[6],           // -75
       (1 / 3) * dist[5] + (2 / 3) * dist[6],           // -60
-      dist[6],                                                                     // -45
+      dist[6],                                         // -45
       (1 / 2) * dist[6] + (1 / 2) * dist[7],           // -30
-      dist[7],                                                                     // -15
+      dist[7],                                         // -15
       (1 / 2) * dist[7] + (1 / 2) * dist[0],           // dist['tof'], // 0
-      dist[0],                                                                     // 15
+      dist[0],                                         // 15
       (1 / 2) * dist[0] + (1 / 2) * dist[1],           // 30
-      dist[1],                                                                     // 45
+      dist[1],                                         // 45
       (2 / 3) * dist[1] + (1 / 3) * dist[2],           // 60
       (1 / 3) * dist[1] + (2 / 3) * dist[2],           // 75
-      dist[2],                                                                     // 90
+      dist[2],                                         // 90
       (3 / 4) * dist[2] + (1 / 4) * dist[3],           // 105
       (2 / 4) * dist[2] + (2 / 4) * dist[3],           // 120
       (1 / 4) * dist[2] + (3 / 4) * dist[3],           // 135
-      dist[3],                                                                     // 150
+      dist[3],                                         // 150
     };
     laser_publisher->publish(msg);
 
