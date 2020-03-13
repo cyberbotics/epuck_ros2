@@ -124,7 +124,7 @@ def generate_test_description():
     Launch decription configuration.
 
     To run the tests you can use either `launch_test` directly as:
-    $ launch_test src/epuck_ros2/epuck_ros2_cpp/test/test_controller.py
+    $ launch_test src/epuck_ros2/epuck_ros2_cpp/test/test_driver.py
     or `colcon`:
     $ colcon test --packages-select epuck_ros2_cpp
 
@@ -135,7 +135,7 @@ def generate_test_description():
     """
     controller = launch_ros.actions.Node(
         package='epuck_ros2_cpp',
-        node_executable='controller',
+        node_executable='driver',
         output='screen',
         arguments=['--type', 'test']
     )
@@ -156,7 +156,7 @@ class TestController(unittest.TestCase):
         rclpy.shutdown()
 
     def setUp(self):
-        self.node = rclpy.create_node('test_controller')
+        self.node = rclpy.create_node('driver_tester')
 
     def tearDown(self):
         self.node.destroy_node()
@@ -165,7 +165,6 @@ class TestController(unittest.TestCase):
         publish_twist(self.node, angular_z=1.0)
 
         _, buffer = read_params_from_i2c()
-        print(buffer)
         checksum = 0
         for i in range(ACTUATOR_SIZE - 1):
             checksum ^= buffer[i]
@@ -227,7 +226,7 @@ class TestController(unittest.TestCase):
             condition, 'The node hasn\'t published any distance measurement')
 
     def test_laser_scan(self, launch_service, proc_output):
-        write_params_to_i2c({'ps4': 120})
+        write_params_to_i2c({'ps3': 120})
         condition = check_topic_condition(
             self.node,
             LaserScan,
@@ -235,9 +234,9 @@ class TestController(unittest.TestCase):
             lambda msg: abs(msg.ranges[0] - 0.05 -
                             DISTANCE_FROM_CENTER) < 1E-3)
         self.assertTrue(
-            condition, 'Sensor ps4 at -150 doesn\'t give a good results')
+            condition, 'Sensor ps3 at -150 doesn\'t give a good results')
 
-        write_params_to_i2c({'ps5': 120})
+        write_params_to_i2c({'ps2': 120})
         condition = check_topic_condition(
             self.node,
             LaserScan,
@@ -245,4 +244,4 @@ class TestController(unittest.TestCase):
             lambda msg: abs(msg.ranges[4] - 0.05 - DISTANCE_FROM_CENTER) < 1E-3
         )
         self.assertTrue(
-            condition, 'Sensor ps5 at -90 doesn\'t give a good results')
+            condition, 'Sensor ps2 at -90 doesn\'t give a good results')

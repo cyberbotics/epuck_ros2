@@ -20,21 +20,23 @@ find_package(std_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
 
 
-add_executable(controller src/controller.cpp)
-target_include_directories(controller PUBLIC
+add_executable(driver src/driver.cpp)
+target_include_directories(driver PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 
-ament_target_dependencies(controller
+ament_target_dependencies(driver
   rclcpp
   geometry_msgs
   std_msgs
   sensor_msgs
+  tf2_ros
 )
 
-install(TARGETS controller
+install(TARGETS driver
   EXPORT export_${PROJECT_NAME}
   DESTINATION lib/${PROJECT_NAME})
 
@@ -46,7 +48,7 @@ if(BUILD_TESTING)
   find_package(launch_testing_ament_cmake REQUIRED)
 
   add_launch_test(
-    "test/test_controller.py"
+    "test/test_driver.py"
     TIMEOUT 60
   )
 endif()
