@@ -42,9 +42,12 @@ def arr2int16(arr):
 
 def int162arr(val):
     """Little-endian formulation."""
+    val = int(val)
+    if val < 0:
+        val += 2**16
     arr = [
-        int(val) & 0xFF,
-        (int(val) >> 8) & 0xFF
+        val & 0xFF,
+        (val >> 8) & 0xFF
     ]
     return arr
 
@@ -264,12 +267,12 @@ class TestController(unittest.TestCase):
         self.assertTrue(
             condition, 'Sensor ps2 at -90 doesn\'t give a good results')
 
-    def test_odometry(self, launch_service, proc_output):
+    def test_odometry_forward(self, launch_service, proc_output):
         # This will restart odometry
-        # cli = self.node.create_client(SetParameters, 'pipuck_driver/set_parameters')
-        # cli.wait_for_service(timeout_sec=1.0)
-        # set_param(cli, 'wheel_distance', 0.05685)
-        # set_param(cli, 'wheel_radius', 0.02)
+        cli = self.node.create_client(SetParameters, 'pipuck_driver/set_parameters')
+        cli.wait_for_service(timeout_sec=1.0)
+        set_param(cli, 'wheel_distance', 0.05685)
+        set_param(cli, 'wheel_radius', 0.02)
 
         # Set odometry to I2C and verify
         write_params_to_i2c({'left_position': 2000 / (2 * pi)})
@@ -292,4 +295,22 @@ class TestController(unittest.TestCase):
             lambda msg: abs(msg.pose.pose.position.x > 0.02)
         )
         self.assertTrue(condition, 'Should move more forward')
+
+    def test_odometry_backward(self, launch_service, proc_output):
+        # This will restart odometry
+        cli = self.node.create_client(SetParameters, 'pipuck_driver/set_parameters')
+        cli.wait_for_service(timeout_sec=1.0)
+        set_param(cli, 'wheel_distance', 0.05685)
+        set_param(cli, 'wheel_radius', 0.02)
+
+        # Set odometry to I2C and verify
+        write_params_to_i2c({'left_position': -2000 / (2 * pi)})
+        write_params_to_i2c({'right_position': -2000 / (2 * pi)})
+        condition = check_topic_condition(
+            self.node,
+            Odometry,
+            'odom',
+            lambda msg: abs(msg.pose.pose.position.x < -0.01)
+        )
+        self.assertTrue(condition, 'Should move backward')
 

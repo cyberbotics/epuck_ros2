@@ -325,8 +325,8 @@ private:
 
   void publish_odometry_data(rclcpp::Time &stamp)
   {
-    const int left_wheel_raw = (msg_sensors[41] & 0x00FF) | ((msg_sensors[42] << 8) & 0xFF00);
-    const int right_wheel_raw = (msg_sensors[43] & 0x00FF) | ((msg_sensors[44] << 8) & 0xFF00);
+    const int16_t left_wheel_raw = (msg_sensors[41] & 0x00FF) | ((msg_sensors[42] << 8) & 0xFF00);
+    const int16_t right_wheel_raw = (msg_sensors[43] & 0x00FF) | ((msg_sensors[44] << 8) & 0xFF00);
     const float left_wheel_ticks = left_wheel_raw / (ENCODER_RESOLUTION / (2 * M_PI));
     const float right_wheel_ticks = right_wheel_raw / (ENCODER_RESOLUTION / (2 * M_PI));
 
@@ -437,6 +437,7 @@ private:
   float prev_angle;
   float prev_position_x;
   float prev_position_y;
+
   float wheel_distance;
   float wheel_radius;
 };
