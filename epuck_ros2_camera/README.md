@@ -1,6 +1,6 @@
 # E-Puck Camera
 
-This ROS2 driver takes images from camera device located on E-Puck2 robot. It uses V4L2 driver for extracting the images from the camera and Multimedia Abstraction Layer to perform fast JPEG conversion by utilising onboard GPU.
+This ROS2 driver takes images from camera device located on e-puck2 robot. It uses V4L2 driver for extracting the images from the camera and Multimedia Abstraction Layer to perform fast JPEG conversion by utilizing onboard GPU.
 
 ## Parameters
 - `quality` Quality of JPEG conversion (default 8)
