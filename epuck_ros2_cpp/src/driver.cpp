@@ -337,22 +337,21 @@ private:
     const int16_t right_wheel_raw = (msg_sensors[43] & 0x00FF) | ((msg_sensors[44] << 8) & 0xFF00);
 
     // Handle overflow
-    // The MCU can handle only 2 bytes of ticks (about 4m), therefore this code allows us to 
-    // track ticks greater than 2^15
-    const float prev_left_wheel_rad = odom_left_overflow * POW2(16) + prev_left_wheel_raw;
-    const float prev_right_wheel_rad = odom_right_overflow * POW2(16) + prev_right_wheel_raw;
-    if (abs((long int)prev_left_wheel_raw - (long int)left_wheel_raw) > POW2(15) - ODOM_OVERFLOW_GRACE_TICKS) {
-      std::cout << "Test: " << (int)prev_left_wheel_raw << " " << (int)left_wheel_raw << std::endl;
+    // The MCU can handle only 2 bytes of ticks (about 4m), therefore this code allows us to
+    // track even when the number of ticks has reached maximum value of 2^15. It is based on detecting
+    // the overflow and updating counter `odom_left_overflow`/`odom_right_overflow`.
+    const long int prev_left_wheel_corrected = odom_left_overflow * POW2(16) + prev_left_wheel_raw;
+    const long int prev_right_wheel_corrected = odom_right_overflow * POW2(16) + prev_right_wheel_raw;
+    if (abs((long int)prev_left_wheel_raw - (long int)left_wheel_raw) > POW2(15) - ODOM_OVERFLOW_GRACE_TICKS)
       odom_left_overflow = (prev_left_wheel_raw > 0 && left_wheel_raw < 0) ? odom_left_overflow + 1 : odom_left_overflow - 1;
-    }
-    if (abs((long int)prev_right_wheel_raw - (long int)right_wheel_raw) > POW2(15) - ODOM_OVERFLOW_GRACE_TICKS) {
-      std::cout << "Test: " << (int)prev_right_wheel_raw << " " << (int)right_wheel_raw << std::endl;
+    if (abs((long int)prev_right_wheel_raw - (long int)right_wheel_raw) > POW2(15) - ODOM_OVERFLOW_GRACE_TICKS)
       odom_right_overflow = (prev_right_wheel_raw > 0 && right_wheel_raw < 0) ? odom_right_overflow + 1 : odom_right_overflow - 1;
-    }
     const long int left_wheel_corrected = odom_left_overflow * POW2(16) + left_wheel_raw;
     const long int right_wheel_corrected = odom_right_overflow * POW2(16) + right_wheel_raw;
     const float left_wheel_rad = left_wheel_corrected / (ENCODER_RESOLUTION / (2 * M_PI));
     const float right_wheel_rad = right_wheel_corrected / (ENCODER_RESOLUTION / (2 * M_PI));
+    const float prev_left_wheel_rad = prev_left_wheel_corrected / (ENCODER_RESOLUTION / (2 * M_PI));
+    const float prev_right_wheel_rad = prev_right_wheel_corrected / (ENCODER_RESOLUTION / (2 * M_PI));
 
     // Calculate velocities
     const float v_left_rad = (left_wheel_rad - prev_left_wheel_rad) / PERIOD_S;
