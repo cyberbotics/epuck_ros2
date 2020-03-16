@@ -29,34 +29,31 @@
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 
-static MMAL_COMPONENT_T * encoder;
+static MMAL_COMPONENT_T *encoder;
 static MMAL_STATUS_T status;
-static MMAL_POOL_T * pool_in;
-static MMAL_POOL_T * pool_out;
+static MMAL_POOL_T *pool_in;
+static MMAL_POOL_T *pool_out;
 static VCOS_SEMAPHORE_T semaphore;
 static VCOS_STATUS_T vcos_status;
-static MMAL_BUFFER_HEADER_T * buffer;
-static MMAL_QUEUE_T * queue;
+static MMAL_BUFFER_HEADER_T *buffer;
+static MMAL_QUEUE_T *queue;
 static MMAL_BOOL_T eos;
 static int sent_bytes;
 
-static void release_buffer_callback(MMAL_PORT_T * port, MMAL_BUFFER_HEADER_T * buffer);
-static void put_to_queue_callback(MMAL_PORT_T * port, MMAL_BUFFER_HEADER_T * buffer);
+static void release_buffer_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer);
+static void put_to_queue_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer);
 
-void put_to_queue_callback(MMAL_PORT_T * port, MMAL_BUFFER_HEADER_T * buffer)
-{
+void put_to_queue_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer) {
   mmal_queue_put(queue, buffer);
   vcos_semaphore_post(&semaphore);
 }
 
-void release_buffer_callback(MMAL_PORT_T * port, MMAL_BUFFER_HEADER_T * buffer)
-{
+void release_buffer_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer) {
   mmal_buffer_header_release(buffer);
   vcos_semaphore_post(&semaphore);
 }
 
-void pipuck_jpeg_init(pipuck_image_t * input_image, pipuck_image_t * output_image)
-{
+void pipuck_jpeg_init(pipuck_image_t *input_image, pipuck_image_t *output_image) {
   bcm_host_init();
   vcos_init();
 
@@ -86,7 +83,7 @@ void pipuck_jpeg_init(pipuck_image_t * input_image, pipuck_image_t * output_imag
   status = mmal_port_format_commit(encoder->output[0]);
   assert(status == MMAL_SUCCESS);
   status = mmal_port_parameter_set_uint32(encoder->output[0], MMAL_PARAMETER_JPEG_Q_FACTOR,
-      output_image->quality);
+                                          output_image->quality);
   assert(status == MMAL_SUCCESS);
 
   // Configure buffers
@@ -95,10 +92,10 @@ void pipuck_jpeg_init(pipuck_image_t * input_image, pipuck_image_t * output_imag
   encoder->output[0]->buffer_num = encoder->output[0]->buffer_num_recommended;
   encoder->output[0]->buffer_size = encoder->output[0]->buffer_size_recommended;
   printf("There are %d input buffers with size %d and %d output buffers with size %d\n",
-    encoder->input[0]->buffer_num,
-    encoder->input[0]->buffer_size,
-    encoder->output[0]->buffer_num,
-    encoder->output[0]->buffer_size);
+         encoder->input[0]->buffer_num,
+         encoder->input[0]->buffer_size,
+         encoder->output[0]->buffer_num,
+         encoder->output[0]->buffer_size);
 
   // Enable ports
   status = mmal_port_enable(encoder->input[0], release_buffer_callback);
@@ -109,10 +106,10 @@ void pipuck_jpeg_init(pipuck_image_t * input_image, pipuck_image_t * output_imag
   // Create a buffer pool
   queue = mmal_queue_create();
   pool_in = mmal_port_pool_create(encoder->input[0], encoder->input[0]->buffer_num,
-      encoder->input[0]->buffer_size);
+                                  encoder->input[0]->buffer_size);
   assert(pool_in != 0);
   pool_out = mmal_port_pool_create(encoder->output[0], encoder->output[0]->buffer_num,
-      encoder->output[0]->buffer_size);
+                                   encoder->output[0]->buffer_size);
   assert(pool_out != 0);
 
   // Start component
@@ -120,8 +117,7 @@ void pipuck_jpeg_init(pipuck_image_t * input_image, pipuck_image_t * output_imag
   assert(status == MMAL_SUCCESS);
 }
 
-void pipuck_jpeg_deinit()
-{
+void pipuck_jpeg_deinit() {
   mmal_port_disable(encoder->input[0]);
   mmal_port_disable(encoder->output[0]);
   mmal_component_disable(encoder);
@@ -131,8 +127,7 @@ void pipuck_jpeg_deinit()
   vcos_semaphore_delete(&semaphore);
 }
 
-int pipuck_jpeg_encode(pipuck_image_t * input_image, pipuck_image_t * output_image)
-{
+int pipuck_jpeg_encode(pipuck_image_t *input_image, pipuck_image_t *output_image) {
   eos = MMAL_FALSE;
   sent_bytes = 0;
   output_image->size = 0;

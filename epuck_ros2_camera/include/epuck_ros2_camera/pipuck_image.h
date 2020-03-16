@@ -25,11 +25,11 @@ typedef struct _pipuck_image_t
   int width;
   int height;
   int size;
-  char * data;
+  char *data;
   int encoding;
   int quality;
 } pipuck_image_t;
 
-void pipuck_image_init(pipuck_image_t * image);
+void pipuck_image_init(pipuck_image_t *image);
 
 #endif

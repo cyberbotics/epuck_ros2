@@ -56,27 +56,22 @@ const std::vector<std::vector<float>> INFRARED_TABLE =
   {0.02, 383.84}, {0.03, 234.93}, {0.04, 158.03}, {0.05, 120},
   {0.06, 104.09}, {0.07, 67.19}, {0.1, 0.0}};
 
-class EPuckPublisher : public rclcpp::Node
-{
+class EPuckPublisher : public rclcpp::Node {
 public:
-  EPuckPublisher(int argc, char * argv[])
-  : Node("pipuck_driver")
-  {
+  EPuckPublisher(int argc, char *argv[]) : Node("pipuck_driver") {
     // Parse arguments
     std::string type = "hw";
-    for (int i = 1; i < argc; i++) {
+    for (int i = 1; i < argc; i++)
       if (strcmp(argv[i], "--type") == 0) {
         i++;
         type = argv[i];
       }
-    }
 
     // Create I2C object
-    if (type == "test") {
+    if (type == "test")
       i2c_main = std::make_unique<I2CWrapperTest>("/dev/i2c-4");
-    } else {
+    else
       i2c_main = std::make_unique<I2CWrapperHW>("/dev/i2c-4");
-    }
 
     // Initialize the buffers
     std::fill(msg_actuators, msg_actuators + MSG_ACTUATORS_SIZE, 0);
@@ -86,13 +81,12 @@ public:
     subscription = this->create_subscription<geometry_msgs::msg::Twist>(
       "cmd_vel", 1, std::bind(&EPuckPublisher::on_cmd_vel_received, this, std::placeholders::_1));
     laser_publisher = this->create_publisher<sensor_msgs::msg::LaserScan>("laser", 1);
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 8; i++)
       range_publisher[i] = this->create_publisher<sensor_msgs::msg::Range>("ps" + std::to_string(
-            i), 1);
-    }
+                                                                             i), 1);
     timer =
       this->create_wall_timer(std::chrono::milliseconds(PERIOD_MS),
-        std::bind(&EPuckPublisher::update_callback, this));
+                              std::bind(&EPuckPublisher::update_callback, this));
 
     RCLCPP_INFO(this->get_logger(), "EPuck Driver has been initialized");
     RCLCPP_INFO(this->get_logger(), "Driver mode: %s", type.c_str());
@@ -101,9 +95,8 @@ public:
   ~EPuckPublisher() {close(fh);}
 
 private:
-  static float intensity_to_distance(int p_x)
-  {
-    for (unsigned int i = 0; i < INFRARED_TABLE.size() - 1; i++) {
+  static float intensity_to_distance(int p_x) {
+    for (unsigned int i = 0; i < INFRARED_TABLE.size() - 1; i++)
       if (INFRARED_TABLE[i][1] >= p_x && INFRARED_TABLE[i + 1][1] < p_x) {
         const float b_x = INFRARED_TABLE[i][1];
         const float b_y = INFRARED_TABLE[i][0];
@@ -112,14 +105,12 @@ private:
         const float p_y = ((b_y - a_y) / (b_x - a_x)) * (p_x - a_x) + a_y;
         return p_y;
       }
-    }
     return 100.0;
   }
 
   static geometry_msgs::msg::Quaternion::SharedPtr euler_to_quaternion(
     double roll, double pitch,
-    double yaw)
-  {
+    double yaw) {
     geometry_msgs::msg::Quaternion::SharedPtr q;
     q->x = sin(roll / 2) * cos(pitch / 2) * cos(yaw / 2) - cos(roll / 2) * sin(pitch / 2) * sin(
       yaw / 2);
@@ -132,8 +123,7 @@ private:
     return q;
   }
 
-  void on_cmd_vel_received(const geometry_msgs::msg::Twist::SharedPtr msg)
-  {
+  void on_cmd_vel_received(const geometry_msgs::msg::Twist::SharedPtr msg) {
     const double left_velocity = (2.0 * msg->linear.x - msg->angular.z * WHEEL_DISTANCE) /
       (2.0 * WHEEL_RADIUS);
     const double right_velocity = (2.0 * msg->linear.x + msg->angular.z * WHEEL_DISTANCE) /
@@ -152,8 +142,7 @@ private:
     msg_actuators[3] = (right_velocity_big >> 8) & 0xFF;
   }
 
-  void publish_distance_data(rclcpp::Time & stamp)
-  {
+  void publish_distance_data(rclcpp::Time &stamp) {
     // Decode measurements
     float dist[8];
     for (int i = 0; i < 8; i++) {
@@ -211,8 +200,7 @@ private:
     }
   }
 
-  void update_callback()
-  {
+  void update_callback() {
     int status;
     rclcpp::Time stamp;
 
@@ -222,9 +210,8 @@ private:
 
     // Main MCU: Write
     msg_actuators[MSG_ACTUATORS_SIZE - 1] = 0;
-    for (int i = 0; i < MSG_ACTUATORS_SIZE - 1; i++) {
+    for (int i = 0; i < MSG_ACTUATORS_SIZE - 1; i++)
       msg_actuators[MSG_ACTUATORS_SIZE - 1] ^= msg_actuators[i];
-    }
 
     i2c_main->write_data(msg_actuators, MSG_ACTUATORS_SIZE);
     i2c_main->read_data(msg_sensors, MSG_SENSORS_SIZE);
@@ -245,8 +232,7 @@ private:
   char msg_sensors[MSG_SENSORS_SIZE];
 };
 
-int main(int argc, char * argv[])
-{
+int main(int argc, char *argv[]) {
   rclcpp::init(argc, argv);
   rclcpp::spin(std::make_shared<EPuckPublisher>(argc, argv));
   rclcpp::shutdown();
