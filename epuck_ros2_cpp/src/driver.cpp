@@ -52,10 +52,12 @@ extern "C"
 #define PERIOD_S (PERIOD_MS / 1000.0)
 #define OUT_OF_RANGE 0
 #define ENCODER_RESOLUTION 1000.0
+#define ODOM_OVERFLOW_GRACE_TICKS 2000
 
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 #define CLIP(VAL, MIN_VAL, MAX_VAL) MAX(MIN((MAX_VAL), (VAL)), (MIN_VAL))
+#define POW2(N) (1 << (N))
 
 const float DEFAULT_WHEEL_DISTANCE = 0.05685;
 const float DEFAULT_WHEEL_RADIUS = 0.02;
@@ -181,33 +183,39 @@ public:
   ~EPuckPublisher() { close(fh); }
 
 private:
-  void reset_odometry() {
-    prev_left_wheel_ticks = 0;
-    prev_right_wheel_ticks = 0;
+  void reset_odometry()
+  {
+    prev_left_wheel_raw = 0;
+    prev_right_wheel_raw = 0;
+    odom_left_overflow = 0;
+    odom_right_overflow = 0;
     prev_position_x = 0;
     prev_position_y = 0;
     prev_angle = 0;
   }
 
   rcl_interfaces::msg::SetParametersResult param_change_callback(
-    std::vector<rclcpp::Parameter> parameters)
+      std::vector<rclcpp::Parameter> parameters)
   {
     auto result = rcl_interfaces::msg::SetParametersResult();
     result.successful = true;
 
-    for (auto parameter : parameters) {
-      if (parameter.get_name() == "wheel_distance") {
+    for (auto parameter : parameters)
+    {
+      if (parameter.get_name() == "wheel_distance")
+      {
         reset_odometry();
         wheel_distance = (float)parameter.as_double();
       }
-      else if (parameter.get_name() == "wheel_radius") {
+      else if (parameter.get_name() == "wheel_radius")
+      {
         reset_odometry();
         wheel_radius = (float)parameter.as_double();
       }
 
       RCLCPP_INFO(this->get_logger(), "Parameter '%s' has changed to %s",
-        parameter.get_name().c_str(),
-        parameter.value_to_string().c_str());
+                  parameter.get_name().c_str(),
+                  parameter.value_to_string().c_str());
     }
 
     return result;
@@ -327,12 +335,28 @@ private:
   {
     const int16_t left_wheel_raw = (msg_sensors[41] & 0x00FF) | ((msg_sensors[42] << 8) & 0xFF00);
     const int16_t right_wheel_raw = (msg_sensors[43] & 0x00FF) | ((msg_sensors[44] << 8) & 0xFF00);
-    const float left_wheel_ticks = left_wheel_raw / (ENCODER_RESOLUTION / (2 * M_PI));
-    const float right_wheel_ticks = right_wheel_raw / (ENCODER_RESOLUTION / (2 * M_PI));
+
+    // Handle overflow
+    // The MCU can handle only 2 bytes of ticks (about 4m), therefore this code allows us to 
+    // track ticks greater than 2^15
+    const float prev_left_wheel_rad = odom_left_overflow * POW2(16) + prev_left_wheel_raw;
+    const float prev_right_wheel_rad = odom_right_overflow * POW2(16) + prev_right_wheel_raw;
+    if (abs((long int)prev_left_wheel_raw - (long int)left_wheel_raw) > POW2(15) - ODOM_OVERFLOW_GRACE_TICKS) {
+      std::cout << "Test: " << (int)prev_left_wheel_raw << " " << (int)left_wheel_raw << std::endl;
+      odom_left_overflow = (prev_left_wheel_raw > 0 && left_wheel_raw < 0) ? odom_left_overflow + 1 : odom_left_overflow - 1;
+    }
+    if (abs((long int)prev_right_wheel_raw - (long int)right_wheel_raw) > POW2(15) - ODOM_OVERFLOW_GRACE_TICKS) {
+      std::cout << "Test: " << (int)prev_right_wheel_raw << " " << (int)right_wheel_raw << std::endl;
+      odom_right_overflow = (prev_right_wheel_raw > 0 && right_wheel_raw < 0) ? odom_right_overflow + 1 : odom_right_overflow - 1;
+    }
+    const long int left_wheel_corrected = odom_left_overflow * POW2(16) + left_wheel_raw;
+    const long int right_wheel_corrected = odom_right_overflow * POW2(16) + right_wheel_raw;
+    const float left_wheel_rad = left_wheel_corrected / (ENCODER_RESOLUTION / (2 * M_PI));
+    const float right_wheel_rad = right_wheel_corrected / (ENCODER_RESOLUTION / (2 * M_PI));
 
     // Calculate velocities
-    const float v_left_rad = (left_wheel_ticks - this->prev_left_wheel_ticks) / PERIOD_S;
-    const float v_right_rad = (right_wheel_ticks - this->prev_right_wheel_ticks) / PERIOD_S;
+    const float v_left_rad = (left_wheel_rad - prev_left_wheel_rad) / PERIOD_S;
+    const float v_right_rad = (right_wheel_rad - prev_right_wheel_rad) / PERIOD_S;
     const float v_left = v_left_rad * this->wheel_radius;
     const float v_right = v_right_rad * this->wheel_radius;
     const float v = (v_left + v_right) / 2;
@@ -363,8 +387,8 @@ private:
     this->prev_position_x = position_x;
     this->prev_position_y = position_y;
     this->prev_angle = angle;
-    this->prev_left_wheel_ticks = left_wheel_ticks;
-    this->prev_right_wheel_ticks = right_wheel_ticks;
+    this->prev_left_wheel_raw = left_wheel_raw;
+    this->prev_right_wheel_raw = right_wheel_raw;
 
     // Pack & publish odometry
     nav_msgs::msg::Odometry msg;
@@ -399,7 +423,8 @@ private:
     // I2C: Set address
     retry_count = 1;
     success = 0;
-    while (! success && retry_count > 0) {
+    while (!success && retry_count > 0)
+    {
       success = i2c_main->set_address(0x1F);
       retry_count--;
     }
@@ -407,7 +432,8 @@ private:
     // I2C: Write/Read
     retry_count = 3;
     success = 0;
-    while (! success && retry_count > 0) {
+    while (!success && retry_count > 0)
+    {
       // Write
       msg_actuators[MSG_ACTUATORS_SIZE - 1] = 0;
       for (int i = 0; i < MSG_ACTUATORS_SIZE - 1; i++)
@@ -430,7 +456,8 @@ private:
 
     stamp = now();
     publish_distance_data(stamp);
-    if (success) {
+    if (success)
+    {
       publish_odometry_data(stamp);
     }
   }
@@ -453,11 +480,13 @@ private:
   char msg_actuators[MSG_ACTUATORS_SIZE];
   char msg_sensors[MSG_SENSORS_SIZE];
 
-  float prev_left_wheel_ticks;
-  float prev_right_wheel_ticks;
   float prev_angle;
   float prev_position_x;
   float prev_position_y;
+  int16_t prev_left_wheel_raw;
+  int16_t prev_right_wheel_raw;
+  int odom_left_overflow;
+  int odom_right_overflow;
 
   float wheel_distance;
   float wheel_radius;
