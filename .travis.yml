@@ -8,5 +8,6 @@ env:
 install:
   - git clone --quiet --depth 1 https://github.com/ros-industrial/industrial_ci.git .industrial_ci -b master
 script:
+  - cp -f uncrustify.cfg /opt/ros/eloquent/lib/python3.6/site-packages/ament_uncrustify/configuration/ament_code_style.cfg
   - touch epuck_ros2_camera/COLCON_IGNORE
   - .industrial_ci/travis.sh
