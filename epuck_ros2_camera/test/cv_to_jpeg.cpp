@@ -27,9 +27,8 @@ extern "C" {
 #include <opencv2/opencv.hpp>
 
 void convert(
-  pipuck_image_t * input_image, pipuck_image_t * output_image,
-  std::string output_filename)
-{
+  pipuck_image_t *input_image, pipuck_image_t *output_image,
+  std::string output_filename) {
   std::ofstream file;
   file.open(output_filename, std::ios::out | std::ios::binary);
 
@@ -46,8 +45,7 @@ void convert(
 
   std::cout << "Compressed image written to " << output_filename << std::endl;
 }
-int main()
-{
+int main() {
   // Init pipuck images
   pipuck_image_t input_image;
   pipuck_image_t output_image;

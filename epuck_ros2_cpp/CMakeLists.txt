@@ -44,11 +44,9 @@ install(TARGETS driver
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
-  ament_lint_auto_find_test_dependencies()
-
-  find_package(ament_cmake_pytest REQUIRED)
   find_package(launch_testing_ament_cmake REQUIRED)
 
+  ament_lint_auto_find_test_dependencies()
   add_launch_test(
     "test/test_driver.py"
     TIMEOUT 60

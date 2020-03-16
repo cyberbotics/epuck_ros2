@@ -19,6 +19,6 @@
 
 void pipuck_v4l2_init();
 void pipuck_v4l2_deinit();
-void pipuck_v4l2_capture(pipuck_image_t * image);
+void pipuck_v4l2_capture(pipuck_image_t *image);
 
 #endif

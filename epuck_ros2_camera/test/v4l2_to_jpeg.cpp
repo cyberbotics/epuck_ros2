@@ -28,9 +28,8 @@ extern "C" {
 #include <iostream>
 
 void convert(
-  pipuck_image_t * input_image, pipuck_image_t * output_image,
-  std::string output_filename)
-{
+  pipuck_image_t *input_image, pipuck_image_t *output_image,
+  std::string output_filename) {
   std::ofstream file;
   file.open(output_filename, std::ios::out | std::ios::binary);
 
@@ -48,8 +47,7 @@ void convert(
   std::cout << "Compressed image written to " << output_filename << std::endl;
 }
 
-void capture(pipuck_image_t * input_image, std::string output_filename)
-{
+void capture(pipuck_image_t *input_image, std::string output_filename) {
   std::ofstream file;
 
   file.open(output_filename, std::ios::out | std::ios::binary);
@@ -67,8 +65,7 @@ void capture(pipuck_image_t * input_image, std::string output_filename)
   std::cout << "Raw image written to " << output_filename << std::endl;
 }
 
-int main()
-{
+int main() {
   pipuck_image_t input_image;
   pipuck_image_t output_image;
   char output_image_buffer[500 * 1024];

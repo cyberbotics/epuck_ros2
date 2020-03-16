@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern "C"
-{
+extern "C" {
 #include <assert.h>
 #include <fcntl.h>
 #include <linux/i2c-dev.h>
@@ -29,22 +28,22 @@ extern "C"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
-#include <map>
 
 #include "epuck_ros2_cpp/i2c_wrapper.hpp"
 #include "geometry_msgs/msg/quaternion.hpp"
+#include "geometry_msgs/msg/transform_stamped.hpp"
 #include "geometry_msgs/msg/twist.hpp"
+#include "nav_msgs/msg/odometry.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/laser_scan.hpp"
 #include "sensor_msgs/msg/range.hpp"
 #include "std_msgs/msg/string.hpp"
-#include "geometry_msgs/msg/transform_stamped.hpp"
 #include "tf2_ros/static_transform_broadcaster.h"
 #include "tf2_ros/transform_broadcaster.h"
-#include "nav_msgs/msg/odometry.hpp"
 
 #define MSG_ACTUATORS_SIZE 20
 #define MSG_SENSORS_SIZE 47
@@ -62,36 +61,31 @@ extern "C"
 const float DEFAULT_WHEEL_DISTANCE = 0.05685;
 const float DEFAULT_WHEEL_RADIUS = 0.02;
 const float SENSOR_DIST_FROM_CENTER = 0.035;
-const std::vector<std::vector<float>> INFRARED_TABLE =
-    {{0, 4095}, {0.005, 2133.33}, {0.01, 1465.73}, {0.015, 601.46}, {0.02, 383.84}, {0.03, 234.93}, {0.04, 158.03}, {0.05, 120}, {0.06, 104.09}};
+const std::vector<std::vector<float>> INFRARED_TABLE = {
+  {0, 4095},      {0.005, 2133.33}, {0.01, 1465.73}, {0.015, 601.46}, {0.02, 383.84},
+  {0.03, 234.93}, {0.04, 158.03},   {0.05, 120},     {0.06, 104.09}};
 const std::vector<double> DISTANCE_SENSOR_ANGLE = {
-    -15 * M_PI / 180,  // ps0
-    -45 * M_PI / 180,  // ps1
-    -90 * M_PI / 180,  // ps2
-    -150 * M_PI / 180, // ps3
-    150 * M_PI / 180,  // ps4
-    90 * M_PI / 180,   // ps5
-    45 * M_PI / 180,   // ps6
-    15 * M_PI / 180,   // ps7
-    0 * M_PI / 180     // tof
+  -15 * M_PI / 180,   // ps0
+  -45 * M_PI / 180,   // ps1
+  -90 * M_PI / 180,   // ps2
+  -150 * M_PI / 180,  // ps3
+  150 * M_PI / 180,   // ps4
+  90 * M_PI / 180,    // ps5
+  45 * M_PI / 180,    // ps6
+  15 * M_PI / 180,    // ps7
+  0 * M_PI / 180      // tof
 };
 
-class EPuckPublisher : public rclcpp::Node
-{
+class EPuckPublisher : public rclcpp::Node {
 public:
-  EPuckPublisher(int argc, char *argv[])
-      : Node("pipuck_driver")
-  {
+  EPuckPublisher(int argc, char *argv[]) : Node("pipuck_driver") {
     // Parse arguments
     std::string type = "hw";
     for (int i = 1; i < argc; i++)
-    {
-      if (strcmp(argv[i], "--type") == 0)
-      {
+      if (strcmp(argv[i], "--type") == 0) {
         i++;
         type = argv[i];
       }
-    }
 
     wheel_distance = declare_parameter<float>("wheel_distance", DEFAULT_WHEEL_DISTANCE);
     wheel_radius = declare_parameter<float>("wheel_radius", DEFAULT_WHEEL_RADIUS);
@@ -103,13 +97,9 @@ public:
 
     // Create I2C object
     if (type == "test")
-    {
       i2c_main = std::make_unique<I2CWrapperTest>("/dev/i2c-4");
-    }
     else
-    {
       i2c_main = std::make_unique<I2CWrapperHW>("/dev/i2c-4");
-    }
 
     // Initialize the values
     std::fill(msg_actuators, msg_actuators + MSG_ACTUATORS_SIZE, 0);
@@ -118,18 +108,14 @@ public:
 
     // Create subscirbers and publishers
     subscription = this->create_subscription<geometry_msgs::msg::Twist>(
-        "cmd_vel", 1, std::bind(&EPuckPublisher::on_cmd_vel_received, this, std::placeholders::_1));
+      "cmd_vel", 1, std::bind(&EPuckPublisher::on_cmd_vel_received, this, std::placeholders::_1));
     laser_publisher = this->create_publisher<sensor_msgs::msg::LaserScan>("scan", 1);
     odometry_publisher = this->create_publisher<nav_msgs::msg::Odometry>("odom", 1);
     for (int i = 0; i < 8; i++)
-    {
-      range_publisher[i] = this->create_publisher<sensor_msgs::msg::Range>("ps" + std::to_string(
-                                                                                      i),
-                                                                           1);
-    }
-    timer =
-        this->create_wall_timer(std::chrono::milliseconds(PERIOD_MS),
-                                std::bind(&EPuckPublisher::update_callback, this));
+      range_publisher[i] =
+        this->create_publisher<sensor_msgs::msg::Range>("ps" + std::to_string(i), 1);
+    timer = this->create_wall_timer(std::chrono::milliseconds(PERIOD_MS),
+                                    std::bind(&EPuckPublisher::update_callback, this));
 
     // Dynamic tf broadcaster: Odometry
     dynamic_broadcaster = std::make_unique<tf2_ros::TransformBroadcaster>(this);
@@ -150,14 +136,14 @@ public:
     laser_broadcaster->sendTransform(laser_transform);
 
     // Static tf broadcaster: Range (infrared)
-    for (int i = 0; i < 8; i++)
-    {
+    for (int i = 0; i < 8; i++) {
       infrared_broadcasters[i] = std::make_unique<tf2_ros::StaticTransformBroadcaster>(this);
       geometry_msgs::msg::TransformStamped infrared_transform;
       infrared_transform.header.stamp = this->now();
       infrared_transform.header.frame_id = "base_link";
       infrared_transform.child_frame_id = "ps" + std::to_string(i);
-      infrared_transform.transform.rotation = EPuckPublisher::euler_to_quaternion(0, 0, DISTANCE_SENSOR_ANGLE[i]);
+      infrared_transform.transform.rotation =
+        EPuckPublisher::euler_to_quaternion(0, 0, DISTANCE_SENSOR_ANGLE[i]);
       infrared_transform.transform.translation.x = 0;
       infrared_transform.transform.translation.y = 0;
       infrared_transform.transform.translation.z = 0;
@@ -183,8 +169,7 @@ public:
   ~EPuckPublisher() { close(fh); }
 
 private:
-  void reset_odometry()
-  {
+  void reset_odometry() {
     prev_left_wheel_raw = 0;
     prev_right_wheel_raw = 0;
     odom_left_overflow = 0;
@@ -195,38 +180,29 @@ private:
   }
 
   rcl_interfaces::msg::SetParametersResult param_change_callback(
-      std::vector<rclcpp::Parameter> parameters)
-  {
+    std::vector<rclcpp::Parameter> parameters) {
     auto result = rcl_interfaces::msg::SetParametersResult();
     result.successful = true;
 
-    for (auto parameter : parameters)
-    {
-      if (parameter.get_name() == "wheel_distance")
-      {
+    for (auto parameter : parameters) {
+      if (parameter.get_name() == "wheel_distance") {
         reset_odometry();
-        wheel_distance = (float)parameter.as_double();
-      }
-      else if (parameter.get_name() == "wheel_radius")
-      {
+        wheel_distance = static_cast<float>(parameter.as_double());
+      } else if (parameter.get_name() == "wheel_radius") {
         reset_odometry();
-        wheel_radius = (float)parameter.as_double();
+        wheel_radius = static_cast<float>(parameter.as_double());
       }
 
       RCLCPP_INFO(this->get_logger(), "Parameter '%s' has changed to %s",
-                  parameter.get_name().c_str(),
-                  parameter.value_to_string().c_str());
+                  parameter.get_name().c_str(), parameter.value_to_string().c_str());
     }
 
     return result;
   }
 
-  static float intensity_to_distance(int p_x)
-  {
+  static float intensity_to_distance(int p_x) {
     for (unsigned int i = 0; i < INFRARED_TABLE.size() - 1; i++)
-    {
-      if (INFRARED_TABLE[i][1] >= p_x && INFRARED_TABLE[i + 1][1] < p_x)
-      {
+      if (INFRARED_TABLE[i][1] >= p_x && INFRARED_TABLE[i + 1][1] < p_x) {
         const float b_x = INFRARED_TABLE[i][1];
         const float b_y = INFRARED_TABLE[i][0];
         const float a_x = INFRARED_TABLE[i + 1][1];
@@ -234,35 +210,33 @@ private:
         const float p_y = ((b_y - a_y) / (b_x - a_x)) * (p_x - a_x) + a_y;
         return p_y;
       }
-    }
     return OUT_OF_RANGE;
   }
 
-  static geometry_msgs::msg::Quaternion euler_to_quaternion(
-      double roll, double pitch,
-      double yaw)
-  {
+  static geometry_msgs::msg::Quaternion euler_to_quaternion(double roll, double pitch, double yaw) {
     geometry_msgs::msg::Quaternion q;
-    q.x = sin(roll / 2) * cos(pitch / 2) * cos(yaw / 2) - cos(roll / 2) * sin(pitch / 2) * sin(yaw / 2);
-    q.y = cos(roll / 2) * sin(pitch / 2) * cos(yaw / 2) + sin(roll / 2) * cos(pitch / 2) * sin(yaw / 2);
-    q.z = cos(roll / 2) * cos(pitch / 2) * sin(yaw / 2) - sin(roll / 2) * sin(pitch / 2) * cos(yaw / 2);
-    q.w = cos(roll / 2) * cos(pitch / 2) * cos(yaw / 2) + sin(roll / 2) * sin(pitch / 2) * sin(yaw / 2);
+    q.x =
+      sin(roll / 2) * cos(pitch / 2) * cos(yaw / 2) - cos(roll / 2) * sin(pitch / 2) * sin(yaw / 2);
+    q.y =
+      cos(roll / 2) * sin(pitch / 2) * cos(yaw / 2) + sin(roll / 2) * cos(pitch / 2) * sin(yaw / 2);
+    q.z =
+      cos(roll / 2) * cos(pitch / 2) * sin(yaw / 2) - sin(roll / 2) * sin(pitch / 2) * cos(yaw / 2);
+    q.w =
+      cos(roll / 2) * cos(pitch / 2) * cos(yaw / 2) + sin(roll / 2) * sin(pitch / 2) * sin(yaw / 2);
     return q;
   }
 
-  void on_cmd_vel_received(const geometry_msgs::msg::Twist::SharedPtr msg)
-  {
-    const double left_velocity = (2.0 * msg->linear.x - msg->angular.z * wheel_distance) /
-                                 (2.0 * wheel_radius);
-    const double right_velocity = (2.0 * msg->linear.x + msg->angular.z * wheel_distance) /
-                                  (2.0 * wheel_radius);
+  void on_cmd_vel_received(const geometry_msgs::msg::Twist::SharedPtr msg) {
+    const double left_velocity =
+      (2.0 * msg->linear.x - msg->angular.z * wheel_distance) / (2.0 * wheel_radius);
+    const double right_velocity =
+      (2.0 * msg->linear.x + msg->angular.z * wheel_distance) / (2.0 * wheel_radius);
 
     const int left_velocity_big = CLIP(left_velocity / 0.0068, -1108, 1108);
     const int right_velocity_big = CLIP(right_velocity / 0.0068, -1108, 1108);
 
-    RCLCPP_INFO(
-        this->get_logger(), "New velocity, left %d and right %d", left_velocity_big,
-        right_velocity_big);
+    RCLCPP_INFO(this->get_logger(), "New velocity, left %d and right %d", left_velocity_big,
+                right_velocity_big);
 
     msg_actuators[0] = left_velocity_big & 0xFF;
     msg_actuators[1] = (left_velocity_big >> 8) & 0xFF;
@@ -270,15 +244,13 @@ private:
     msg_actuators[3] = (right_velocity_big >> 8) & 0xFF;
   }
 
-  void publish_distance_data(rclcpp::Time &stamp)
-  {
+  void publish_distance_data(rclcpp::Time &stamp) {
     // Decode measurements
     float dist[8];
-    for (int i = 0; i < 8; i++)
-    {
+    for (int i = 0; i < 8; i++) {
       const int distance_intensity = msg_sensors[i * 2] + (msg_sensors[i * 2 + 1] << 8);
-      float distance = EPuckPublisher::intensity_to_distance(distance_intensity) +
-                       SENSOR_DIST_FROM_CENTER;
+      float distance =
+        EPuckPublisher::intensity_to_distance(distance_intensity) + SENSOR_DIST_FROM_CENTER;
       dist[i] = distance;
     }
 
@@ -293,33 +265,32 @@ private:
     msg.range_min = 0.005 + SENSOR_DIST_FROM_CENTER;
     msg.range_max = 0.05 + SENSOR_DIST_FROM_CENTER;
     msg.ranges = std::vector<float>{
-        dist[3],      // -150
-        OUT_OF_RANGE, // -135
-        OUT_OF_RANGE, // -120
-        OUT_OF_RANGE, // -105
-        dist[2],      // -90
-        OUT_OF_RANGE, // -75
-        OUT_OF_RANGE, // -60
-        dist[1],      // -45
-        OUT_OF_RANGE, // -30
-        dist[0],      // -15
-        OUT_OF_RANGE, // dist['tof'], // 0
-        dist[7],      // 15
-        OUT_OF_RANGE, // 30
-        dist[6],      // 45
-        OUT_OF_RANGE, // 60
-        OUT_OF_RANGE, // 75
-        dist[5],      // 90
-        OUT_OF_RANGE, // 105
-        OUT_OF_RANGE, // 120
-        OUT_OF_RANGE, // 135
-        dist[4],      // 150
+      dist[3],       // -150
+      OUT_OF_RANGE,  // -135
+      OUT_OF_RANGE,  // -120
+      OUT_OF_RANGE,  // -105
+      dist[2],       // -90
+      OUT_OF_RANGE,  // -75
+      OUT_OF_RANGE,  // -60
+      dist[1],       // -45
+      OUT_OF_RANGE,  // -30
+      dist[0],       // -15
+      OUT_OF_RANGE,  // dist['tof'], // 0
+      dist[7],       // 15
+      OUT_OF_RANGE,  // 30
+      dist[6],       // 45
+      OUT_OF_RANGE,  // 60
+      OUT_OF_RANGE,  // 75
+      dist[5],       // 90
+      OUT_OF_RANGE,  // 105
+      OUT_OF_RANGE,  // 120
+      OUT_OF_RANGE,  // 135
+      dist[4],       // 150
     };
     laser_publisher->publish(msg);
 
     // Create Range messages
-    for (int i = 0; i < 8; i++)
-    {
+    for (int i = 0; i < 8; i++) {
       auto msg_range = sensor_msgs::msg::Range();
       msg_range.header.stamp = stamp;
       msg_range.header.frame_id = "ps" + std::to_string(i);
@@ -331,27 +302,34 @@ private:
     }
   }
 
-  void publish_odometry_data(rclcpp::Time &stamp)
-  {
+  void publish_odometry_data(rclcpp::Time &stamp) {
     const int16_t left_wheel_raw = (msg_sensors[41] & 0x00FF) | ((msg_sensors[42] << 8) & 0xFF00);
     const int16_t right_wheel_raw = (msg_sensors[43] & 0x00FF) | ((msg_sensors[44] << 8) & 0xFF00);
 
     // Handle overflow
     // The MCU can handle only 2 bytes of ticks (about 4m), therefore this code allows us to
-    // track even when the number of ticks has reached maximum value of 2^15. It is based on detecting
-    // the overflow and updating counter `odom_left_overflow`/`odom_right_overflow`.
-    const long int prev_left_wheel_corrected = odom_left_overflow * POW2(16) + prev_left_wheel_raw;
-    const long int prev_right_wheel_corrected = odom_right_overflow * POW2(16) + prev_right_wheel_raw;
-    if (abs((long int)prev_left_wheel_raw - (long int)left_wheel_raw) > POW2(15) - ODOM_OVERFLOW_GRACE_TICKS)
-      odom_left_overflow = (prev_left_wheel_raw > 0 && left_wheel_raw < 0) ? odom_left_overflow + 1 : odom_left_overflow - 1;
-    if (abs((long int)prev_right_wheel_raw - (long int)right_wheel_raw) > POW2(15) - ODOM_OVERFLOW_GRACE_TICKS)
-      odom_right_overflow = (prev_right_wheel_raw > 0 && right_wheel_raw < 0) ? odom_right_overflow + 1 : odom_right_overflow - 1;
-    const long int left_wheel_corrected = odom_left_overflow * POW2(16) + left_wheel_raw;
-    const long int right_wheel_corrected = odom_right_overflow * POW2(16) + right_wheel_raw;
+    // track even when the number of ticks has reached maximum value of 2^15. It is based on
+    // detecting the overflow and updating counter `odom_left_overflow`/`odom_right_overflow`.
+    const int64_t prev_left_wheel_corrected = odom_left_overflow * POW2(16) + prev_left_wheel_raw;
+    const int64_t prev_right_wheel_corrected =
+      odom_right_overflow * POW2(16) + prev_right_wheel_raw;
+    if (abs((int64_t)prev_left_wheel_raw - (int64_t)left_wheel_raw) >
+        POW2(15) - ODOM_OVERFLOW_GRACE_TICKS)
+      odom_left_overflow = (prev_left_wheel_raw > 0 && left_wheel_raw < 0) ?
+        odom_left_overflow + 1 :
+        odom_left_overflow - 1;
+    if (abs((int64_t)prev_right_wheel_raw - (int64_t)right_wheel_raw) >
+        POW2(15) - ODOM_OVERFLOW_GRACE_TICKS)
+      odom_right_overflow = (prev_right_wheel_raw > 0 && right_wheel_raw < 0) ?
+        odom_right_overflow + 1 :
+        odom_right_overflow - 1;
+    const int64_t left_wheel_corrected = odom_left_overflow * POW2(16) + left_wheel_raw;
+    const int64_t right_wheel_corrected = odom_right_overflow * POW2(16) + right_wheel_raw;
     const float left_wheel_rad = left_wheel_corrected / (ENCODER_RESOLUTION / (2 * M_PI));
     const float right_wheel_rad = right_wheel_corrected / (ENCODER_RESOLUTION / (2 * M_PI));
     const float prev_left_wheel_rad = prev_left_wheel_corrected / (ENCODER_RESOLUTION / (2 * M_PI));
-    const float prev_right_wheel_rad = prev_right_wheel_corrected / (ENCODER_RESOLUTION / (2 * M_PI));
+    const float prev_right_wheel_rad =
+      prev_right_wheel_corrected / (ENCODER_RESOLUTION / (2 * M_PI));
 
     // Calculate velocities
     const float v_left_rad = (left_wheel_rad - prev_left_wheel_rad) / PERIOD_S;
@@ -376,10 +354,8 @@ private:
     const float k30 = v * cos(this->prev_angle + PERIOD_S * k22 / 2);
     const float k31 = v * sin(this->prev_angle + PERIOD_S * k22 / 2);
     const float k32 = omega;
-    const float position_x = this->prev_position_x + (PERIOD_S / 6) *
-                                                         (k00 + 2 * (k10 + k20) + k30);
-    const float position_y = this->prev_position_y + (PERIOD_S / 6) *
-                                                         (k01 + 2 * (k11 + k21) + k31);
+    const float position_x = this->prev_position_x + (PERIOD_S / 6) * (k00 + 2 * (k10 + k20) + k30);
+    const float position_y = this->prev_position_y + (PERIOD_S / 6) * (k01 + 2 * (k11 + k21) + k31);
     const float angle = this->prev_angle + (PERIOD_S / 6) * (k02 + 2 * (k12 + k22) + k32);
 
     // Update variables
@@ -413,8 +389,7 @@ private:
     dynamic_broadcaster->sendTransform(tf);
   }
 
-  void update_callback()
-  {
+  void update_callback() {
     int success;
     int retry_count;
     rclcpp::Time stamp;
@@ -422,8 +397,7 @@ private:
     // I2C: Set address
     retry_count = 1;
     success = 0;
-    while (!success && retry_count > 0)
-    {
+    while (!success && retry_count > 0) {
       success = i2c_main->set_address(0x1F);
       retry_count--;
     }
@@ -431,23 +405,18 @@ private:
     // I2C: Write/Read
     retry_count = 3;
     success = 0;
-    while (!success && retry_count > 0)
-    {
+    while (!success && retry_count > 0) {
       // Write
       msg_actuators[MSG_ACTUATORS_SIZE - 1] = 0;
       for (int i = 0; i < MSG_ACTUATORS_SIZE - 1; i++)
-      {
         msg_actuators[MSG_ACTUATORS_SIZE - 1] ^= msg_actuators[i];
-      }
       success = (i2c_main->write_data(msg_actuators, MSG_ACTUATORS_SIZE) == MSG_ACTUATORS_SIZE);
 
       // Read
       success &= (i2c_main->read_data(msg_sensors, MSG_SENSORS_SIZE) == MSG_SENSORS_SIZE);
       char checksum = 0;
       for (int i = 0; i < MSG_SENSORS_SIZE - 1; i++)
-      {
         checksum ^= msg_sensors[i];
-      }
       success &= (checksum == msg_sensors[MSG_SENSORS_SIZE - 1]);
 
       retry_count--;
@@ -456,9 +425,7 @@ private:
     stamp = now();
     publish_distance_data(stamp);
     if (success)
-    {
       publish_odometry_data(stamp);
-    }
   }
 
   OnSetParametersCallbackHandle::SharedPtr callback_handler;
@@ -491,8 +458,7 @@ private:
   float wheel_radius;
 };
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
   rclcpp::init(argc, argv);
   rclcpp::spin(std::make_shared<EPuckPublisher>(argc, argv));
   rclcpp::shutdown();

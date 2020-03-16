@@ -16,8 +16,7 @@
 
 #include "epuck_ros2_camera/pipuck_jpeg.h"
 
-void pipuck_image_init(pipuck_image_t * image)
-{
+void pipuck_image_init(pipuck_image_t *image) {
   image->width = 640;
   image->height = 480;
   image->quality = 10;

@@ -29,20 +29,17 @@ extern "C"
 #include <fstream>
 
 
-class I2CWrapper
-{
+class I2CWrapper {
 public:
   virtual int set_address(int address) = 0;
-  virtual int read_data(char * buffer, int size) = 0;
-  virtual int write_data(char * buffer, int size) = 0;
+  virtual int read_data(char *buffer, int size) = 0;
+  virtual int write_data(char *buffer, int size) = 0;
 };
 
-class I2CWrapperTest : public I2CWrapper
-{
+class I2CWrapperTest : public I2CWrapper {
 public:
-  I2CWrapperTest() {}
-  explicit I2CWrapperTest(std::string device)
-  {
+  I2CWrapperTest() { }
+  explicit I2CWrapperTest(std::string device) {
     base_filename = "/tmp" + device;
 
     // Create folder
@@ -51,24 +48,21 @@ public:
     std::cout << "Folder " << folder << " is created" << std::endl;
   }
 
-  int set_address(int address)
-  {
+  int set_address(int address) {
     std::fstream stream(base_filename + "_ioctl", std::ios::out | std::ios::binary);
     stream << address << std::endl;
     stream.close();
     return 1;
   }
 
-  int read_data(char * buffer, int size)
-  {
+  int read_data(char *buffer, int size) {
     std::fstream stream(base_filename + "_read", std::ios::in | std::ios::binary);
     stream.read(buffer, size);
     stream.close();
     return size;
   }
 
-  int write_data(char * buffer, int size)
-  {
+  int write_data(char *buffer, int size) {
     std::fstream stream;
     stream.open(base_filename + "_write", std::ios::out | std::ios::binary);
 
@@ -81,32 +75,26 @@ private:
   std::string base_filename;
 };
 
-class I2CWrapperHW : public I2CWrapper
-{
+class I2CWrapperHW : public I2CWrapper {
 public:
-  I2CWrapperHW() {}
+  I2CWrapperHW() { }
 
-  explicit I2CWrapperHW(std::string device)
-  {
+  explicit I2CWrapperHW(std::string device) {
     fh = open(device.c_str(), O_RDWR);
     std::cout << fh << std::endl;
-    if (fh < 0) {
+    if (fh < 0)
       std::cout << "Cannot open file: " << device << std::endl;
-    }
   }
 
-  int set_address(int address)
-  {
+  int set_address(int address) {
     return ioctl(fh, I2C_SLAVE, address);
   }
 
-  int read_data(char * buffer, int size)
-  {
+  int read_data(char *buffer, int size) {
     return read(fh, buffer, size);
   }
 
-  int write_data(char * buffer, int size)
-  {
+  int write_data(char *buffer, int size) {
     return write(fh, buffer, size);
   }
 
