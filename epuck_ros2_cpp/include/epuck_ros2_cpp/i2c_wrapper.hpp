@@ -75,7 +75,7 @@ private:
 
 class I2CWrapperHW : public I2CWrapper {
 public:
-  I2CWrapperHW() { }
+  I2CWrapperHW() {}
 
   explicit I2CWrapperHW(std::string device) {
     fh = open(device.c_str(), O_RDWR);

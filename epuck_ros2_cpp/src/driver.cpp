@@ -61,9 +61,9 @@ extern "C" {
 const float DEFAULT_WHEEL_DISTANCE = 0.05685;
 const float DEFAULT_WHEEL_RADIUS = 0.02;
 const float SENSOR_DIST_FROM_CENTER = 0.035;
-const std::vector<std::vector<float>> INFRARED_TABLE = {
-  {0, 4095},      {0.005, 2133.33}, {0.01, 1465.73}, {0.015, 601.46}, {0.02, 383.84},
-  {0.03, 234.93}, {0.04, 158.03},   {0.05, 120},     {0.06, 104.09}};
+const std::vector<std::vector<float>> INFRARED_TABLE = {{0, 4095},       {0.005, 2133.33}, {0.01, 1465.73},
+                                                        {0.015, 601.46}, {0.02, 383.84},   {0.03, 234.93},
+                                                        {0.04, 158.03},  {0.05, 120},      {0.06, 104.09}};
 const std::vector<double> DISTANCE_SENSOR_ANGLE = {
   -15 * M_PI / 180,   // ps0
   -45 * M_PI / 180,   // ps1
@@ -112,10 +112,8 @@ public:
     laser_publisher = this->create_publisher<sensor_msgs::msg::LaserScan>("scan", 1);
     odometry_publisher = this->create_publisher<nav_msgs::msg::Odometry>("odom", 1);
     for (int i = 0; i < 8; i++)
-      range_publisher[i] =
-        this->create_publisher<sensor_msgs::msg::Range>("ps" + std::to_string(i), 1);
-    timer = this->create_wall_timer(std::chrono::milliseconds(PERIOD_MS),
-                                    std::bind(&EPuckPublisher::update_callback, this));
+      range_publisher[i] = this->create_publisher<sensor_msgs::msg::Range>("ps" + std::to_string(i), 1);
+    timer = this->create_wall_timer(std::chrono::milliseconds(PERIOD_MS), std::bind(&EPuckPublisher::update_callback, this));
 
     // Dynamic tf broadcaster: Odometry
     dynamic_broadcaster = std::make_unique<tf2_ros::TransformBroadcaster>(this);
@@ -142,8 +140,7 @@ public:
       infrared_transform.header.stamp = this->now();
       infrared_transform.header.frame_id = "base_link";
       infrared_transform.child_frame_id = "ps" + std::to_string(i);
-      infrared_transform.transform.rotation =
-        EPuckPublisher::euler_to_quaternion(0, 0, DISTANCE_SENSOR_ANGLE[i]);
+      infrared_transform.transform.rotation = EPuckPublisher::euler_to_quaternion(0, 0, DISTANCE_SENSOR_ANGLE[i]);
       infrared_transform.transform.translation.x = 0;
       infrared_transform.transform.translation.y = 0;
       infrared_transform.transform.translation.z = 0;
@@ -179,8 +176,7 @@ private:
     prev_angle = 0;
   }
 
-  rcl_interfaces::msg::SetParametersResult param_change_callback(
-    std::vector<rclcpp::Parameter> parameters) {
+  rcl_interfaces::msg::SetParametersResult param_change_callback(std::vector<rclcpp::Parameter> parameters) {
     auto result = rcl_interfaces::msg::SetParametersResult();
     result.successful = true;
 
@@ -193,8 +189,8 @@ private:
         wheel_radius = static_cast<float>(parameter.as_double());
       }
 
-      RCLCPP_INFO(this->get_logger(), "Parameter '%s' has changed to %s",
-                  parameter.get_name().c_str(), parameter.value_to_string().c_str());
+      RCLCPP_INFO(this->get_logger(), "Parameter '%s' has changed to %s", parameter.get_name().c_str(),
+                  parameter.value_to_string().c_str());
     }
 
     return result;
@@ -215,28 +211,21 @@ private:
 
   static geometry_msgs::msg::Quaternion euler_to_quaternion(double roll, double pitch, double yaw) {
     geometry_msgs::msg::Quaternion q;
-    q.x =
-      sin(roll / 2) * cos(pitch / 2) * cos(yaw / 2) - cos(roll / 2) * sin(pitch / 2) * sin(yaw / 2);
-    q.y =
-      cos(roll / 2) * sin(pitch / 2) * cos(yaw / 2) + sin(roll / 2) * cos(pitch / 2) * sin(yaw / 2);
-    q.z =
-      cos(roll / 2) * cos(pitch / 2) * sin(yaw / 2) - sin(roll / 2) * sin(pitch / 2) * cos(yaw / 2);
-    q.w =
-      cos(roll / 2) * cos(pitch / 2) * cos(yaw / 2) + sin(roll / 2) * sin(pitch / 2) * sin(yaw / 2);
+    q.x = sin(roll / 2) * cos(pitch / 2) * cos(yaw / 2) - cos(roll / 2) * sin(pitch / 2) * sin(yaw / 2);
+    q.y = cos(roll / 2) * sin(pitch / 2) * cos(yaw / 2) + sin(roll / 2) * cos(pitch / 2) * sin(yaw / 2);
+    q.z = cos(roll / 2) * cos(pitch / 2) * sin(yaw / 2) - sin(roll / 2) * sin(pitch / 2) * cos(yaw / 2);
+    q.w = cos(roll / 2) * cos(pitch / 2) * cos(yaw / 2) + sin(roll / 2) * sin(pitch / 2) * sin(yaw / 2);
     return q;
   }
 
   void on_cmd_vel_received(const geometry_msgs::msg::Twist::SharedPtr msg) {
-    const double left_velocity =
-      (2.0 * msg->linear.x - msg->angular.z * wheel_distance) / (2.0 * wheel_radius);
-    const double right_velocity =
-      (2.0 * msg->linear.x + msg->angular.z * wheel_distance) / (2.0 * wheel_radius);
+    const double left_velocity = (2.0 * msg->linear.x - msg->angular.z * wheel_distance) / (2.0 * wheel_radius);
+    const double right_velocity = (2.0 * msg->linear.x + msg->angular.z * wheel_distance) / (2.0 * wheel_radius);
 
     const int left_velocity_big = CLIP(left_velocity / 0.0068, -1108, 1108);
     const int right_velocity_big = CLIP(right_velocity / 0.0068, -1108, 1108);
 
-    RCLCPP_INFO(this->get_logger(), "New velocity, left %d and right %d", left_velocity_big,
-                right_velocity_big);
+    RCLCPP_INFO(this->get_logger(), "New velocity, left %d and right %d", left_velocity_big, right_velocity_big);
 
     msg_actuators[0] = left_velocity_big & 0xFF;
     msg_actuators[1] = (left_velocity_big >> 8) & 0xFF;
@@ -249,8 +238,7 @@ private:
     float dist[8];
     for (int i = 0; i < 8; i++) {
       const int distance_intensity = msg_sensors[i * 2] + (msg_sensors[i * 2 + 1] << 8);
-      float distance =
-        EPuckPublisher::intensity_to_distance(distance_intensity) + SENSOR_DIST_FROM_CENTER;
+      float distance = EPuckPublisher::intensity_to_distance(distance_intensity) + SENSOR_DIST_FROM_CENTER;
       dist[i] = distance;
     }
 
@@ -311,25 +299,18 @@ private:
     // track even when the number of ticks has reached maximum value of 2^15. It is based on
     // detecting the overflow and updating counter `odom_left_overflow`/`odom_right_overflow`.
     const int64_t prev_left_wheel_corrected = odom_left_overflow * POW2(16) + prev_left_wheel_raw;
-    const int64_t prev_right_wheel_corrected =
-      odom_right_overflow * POW2(16) + prev_right_wheel_raw;
-    if (abs((int64_t)prev_left_wheel_raw - (int64_t)left_wheel_raw) >
-        POW2(15) - ODOM_OVERFLOW_GRACE_TICKS)
-      odom_left_overflow = (prev_left_wheel_raw > 0 && left_wheel_raw < 0) ?
-        odom_left_overflow + 1 :
-        odom_left_overflow - 1;
-    if (abs((int64_t)prev_right_wheel_raw - (int64_t)right_wheel_raw) >
-        POW2(15) - ODOM_OVERFLOW_GRACE_TICKS)
-      odom_right_overflow = (prev_right_wheel_raw > 0 && right_wheel_raw < 0) ?
-        odom_right_overflow + 1 :
-        odom_right_overflow - 1;
+    const int64_t prev_right_wheel_corrected = odom_right_overflow * POW2(16) + prev_right_wheel_raw;
+    if (abs((int64_t)prev_left_wheel_raw - (int64_t)left_wheel_raw) > POW2(15) - ODOM_OVERFLOW_GRACE_TICKS)
+      odom_left_overflow = (prev_left_wheel_raw > 0 && left_wheel_raw < 0) ? odom_left_overflow + 1 : odom_left_overflow - 1;
+    if (abs((int64_t)prev_right_wheel_raw - (int64_t)right_wheel_raw) > POW2(15) - ODOM_OVERFLOW_GRACE_TICKS)
+      odom_right_overflow =
+        (prev_right_wheel_raw > 0 && right_wheel_raw < 0) ? odom_right_overflow + 1 : odom_right_overflow - 1;
     const int64_t left_wheel_corrected = odom_left_overflow * POW2(16) + left_wheel_raw;
     const int64_t right_wheel_corrected = odom_right_overflow * POW2(16) + right_wheel_raw;
     const float left_wheel_rad = left_wheel_corrected / (ENCODER_RESOLUTION / (2 * M_PI));
     const float right_wheel_rad = right_wheel_corrected / (ENCODER_RESOLUTION / (2 * M_PI));
     const float prev_left_wheel_rad = prev_left_wheel_corrected / (ENCODER_RESOLUTION / (2 * M_PI));
-    const float prev_right_wheel_rad =
-      prev_right_wheel_corrected / (ENCODER_RESOLUTION / (2 * M_PI));
+    const float prev_right_wheel_rad = prev_right_wheel_corrected / (ENCODER_RESOLUTION / (2 * M_PI));
 
     // Calculate velocities
     const float v_left_rad = (left_wheel_rad - prev_left_wheel_rad) / PERIOD_S;

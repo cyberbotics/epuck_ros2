@@ -275,9 +275,10 @@ class TestController(unittest.TestCase):
 
     def test_odometry_forward(self, launch_service, proc_output):
         # This will restart odometry
-        write_params_to_i2c({'left_position': 0 })
-        write_params_to_i2c({'right_position': 0 })
-        cli = self.node.create_client(SetParameters, 'pipuck_driver/set_parameters')
+        write_params_to_i2c({'left_position': 0})
+        write_params_to_i2c({'right_position': 0})
+        cli = self.node.create_client(
+            SetParameters, 'pipuck_driver/set_parameters')
         cli.wait_for_service(timeout_sec=1.0)
         set_param(cli, 'wheel_distance', 0.05685)
         set_param(cli, 'wheel_radius', 0.02)
@@ -307,9 +308,10 @@ class TestController(unittest.TestCase):
 
     def test_odometry_backward(self, launch_service, proc_output):
         # This will restart odometry
-        write_params_to_i2c({'left_position': 0 })
-        write_params_to_i2c({'right_position': 0 })
-        cli = self.node.create_client(SetParameters, 'pipuck_driver/set_parameters')
+        write_params_to_i2c({'left_position': 0})
+        write_params_to_i2c({'right_position': 0})
+        cli = self.node.create_client(
+            SetParameters, 'pipuck_driver/set_parameters')
         cli.wait_for_service(timeout_sec=1.0)
         set_param(cli, 'wheel_distance', 0.05685)
         set_param(cli, 'wheel_radius', 0.02)
