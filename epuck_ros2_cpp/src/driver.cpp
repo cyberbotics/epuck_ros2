@@ -88,128 +88,128 @@ public:
       }
     }
 
-    wheel_distance = declare_parameter<float>("wheel_distance", DEFAULT_WHEEL_DISTANCE);
-    wheel_radius = declare_parameter<float>("wheel_radius", DEFAULT_WHEEL_RADIUS);
-    callback_handler =
-      this->add_on_set_parameters_callback(std::bind(&EPuckPublisher::param_change_callback, this, std::placeholders::_1));
+    mWheelDistance = declare_parameter<float>("wheel_distance", DEFAULT_WHEEL_DISTANCE);
+    mWheelRadius = declare_parameter<float>("wheel_radius", DEFAULT_WHEEL_RADIUS);
+    mCallbackHandler =
+      add_on_set_parameters_callback(std::bind(&EPuckPublisher::paramChangeCallback, this, std::placeholders::_1));
 
     // Create I2C object
     if (type == "test")
-      i2c_main = std::make_unique<I2CWrapperTest>("/dev/i2c-4");
+      mI2cMain = std::make_unique<I2CWrapperTest>("/dev/i2c-4");
     else
-      i2c_main = std::make_unique<I2CWrapperHW>("/dev/i2c-4");
+      mI2cMain = std::make_unique<I2CWrapperHW>("/dev/i2c-4");
 
     // Initialize the values
-    std::fill(msg_actuators, msg_actuators + MSG_ACTUATORS_SIZE, 0);
-    std::fill(msg_sensors, msg_sensors + MSG_SENSORS_SIZE, 0);
-    reset_odometry();
-    i2c_main_err_cnt = 0;
+    std::fill(mMsgActuators, mMsgActuators + MSG_ACTUATORS_SIZE, 0);
+    std::fill(mMsgSensors, mMsgSensors + MSG_SENSORS_SIZE, 0);
+    resetOdometry();
+    mI2cMainErrCnt = 0;
 
     // Create subscirbers and publishers
-    subscription = this->create_subscription<geometry_msgs::msg::Twist>(
-      "cmd_vel", 1, std::bind(&EPuckPublisher::on_cmd_vel_received, this, std::placeholders::_1));
-    laser_publisher = this->create_publisher<sensor_msgs::msg::LaserScan>("scan", 1);
-    odometry_publisher = this->create_publisher<nav_msgs::msg::Odometry>("odom", 1);
+    mSubscription = create_subscription<geometry_msgs::msg::Twist>(
+      "cmd_vel", 1, std::bind(&EPuckPublisher::onCmdVelReceived, this, std::placeholders::_1));
+    mLaserPublisher = create_publisher<sensor_msgs::msg::LaserScan>("scan", 1);
+    mOdometryPublisher = create_publisher<nav_msgs::msg::Odometry>("odom", 1);
     for (int i = 0; i < 8; i++)
-      range_publisher[i] = this->create_publisher<sensor_msgs::msg::Range>("ps" + std::to_string(i), 1);
-    timer = this->create_wall_timer(std::chrono::milliseconds(PERIOD_MS), std::bind(&EPuckPublisher::update_callback, this));
+      mRangePublisher[i] = create_publisher<sensor_msgs::msg::Range>("ps" + std::to_string(i), 1);
+    mTimer = create_wall_timer(std::chrono::milliseconds(PERIOD_MS), std::bind(&EPuckPublisher::updateCallback, this));
 
     // Dynamic tf broadcaster: Odometry
-    dynamic_broadcaster = std::make_unique<tf2_ros::TransformBroadcaster>(this);
+    mDynamicBroadcaster = std::make_unique<tf2_ros::TransformBroadcaster>(this);
 
     // Static tf broadcaster: Laser
-    laser_broadcaster = std::make_unique<tf2_ros::StaticTransformBroadcaster>(this);
-    geometry_msgs::msg::TransformStamped laser_transform;
-    laser_transform.header.stamp = this->now();
-    laser_transform.header.frame_id = "base_link";
-    laser_transform.child_frame_id = "laser_scanner";
-    laser_transform.transform.rotation.x = 0;
-    laser_transform.transform.rotation.y = 0;
-    laser_transform.transform.rotation.z = 0;
-    laser_transform.transform.rotation.w = 1;
-    laser_transform.transform.translation.x = 0;
-    laser_transform.transform.translation.y = 0;
-    laser_transform.transform.translation.z = 0;
-    laser_broadcaster->sendTransform(laser_transform);
+    mLaserBroadcaster = std::make_unique<tf2_ros::StaticTransformBroadcaster>(this);
+    geometry_msgs::msg::TransformStamped laserTransform;
+    laserTransform.header.stamp = now();
+    laserTransform.header.frame_id = "base_link";
+    laserTransform.child_frame_id = "laser_scanner";
+    laserTransform.transform.rotation.x = 0;
+    laserTransform.transform.rotation.y = 0;
+    laserTransform.transform.rotation.z = 0;
+    laserTransform.transform.rotation.w = 1;
+    laserTransform.transform.translation.x = 0;
+    laserTransform.transform.translation.y = 0;
+    laserTransform.transform.translation.z = 0;
+    mLaserBroadcaster->sendTransform(laserTransform);
 
     // Static tf broadcaster: Range (infrared)
     for (int i = 0; i < 8; i++) {
-      infrared_broadcasters[i] = std::make_unique<tf2_ros::StaticTransformBroadcaster>(this);
-      geometry_msgs::msg::TransformStamped infrared_transform;
-      infrared_transform.header.stamp = this->now();
-      infrared_transform.header.frame_id = "base_link";
-      infrared_transform.child_frame_id = "ps" + std::to_string(i);
-      infrared_transform.transform.rotation = EPuckPublisher::euler_to_quaternion(0, 0, DISTANCE_SENSOR_ANGLE[i]);
-      infrared_transform.transform.translation.x = 0;
-      infrared_transform.transform.translation.y = 0;
-      infrared_transform.transform.translation.z = 0;
-      infrared_broadcasters[i]->sendTransform(infrared_transform);
+      mInfraredBroadcasters[i] = std::make_unique<tf2_ros::StaticTransformBroadcaster>(this);
+      geometry_msgs::msg::TransformStamped infraredTransform;
+      infraredTransform.header.stamp = now();
+      infraredTransform.header.frame_id = "base_link";
+      infraredTransform.child_frame_id = "ps" + std::to_string(i);
+      infraredTransform.transform.rotation = EPuckPublisher::euler2quaternion(0, 0, DISTANCE_SENSOR_ANGLE[i]);
+      infraredTransform.transform.translation.x = 0;
+      infraredTransform.transform.translation.y = 0;
+      infraredTransform.transform.translation.z = 0;
+      mInfraredBroadcasters[i]->sendTransform(infraredTransform);
     }
 
     // Static tf broadcaster: Range (ToF)
-    infrared_broadcasters[8] = std::make_unique<tf2_ros::StaticTransformBroadcaster>(this);
-    geometry_msgs::msg::TransformStamped infrared_transform;
-    infrared_transform.header.stamp = this->now();
-    infrared_transform.header.frame_id = "base_link";
-    infrared_transform.child_frame_id = "tof";
-    infrared_transform.transform.rotation = EPuckPublisher::euler_to_quaternion(0, 0, 0);
-    infrared_transform.transform.translation.x = 0;
-    infrared_transform.transform.translation.y = 0;
-    infrared_transform.transform.translation.z = 0;
-    infrared_broadcasters[8]->sendTransform(infrared_transform);
+    mInfraredBroadcasters[8] = std::make_unique<tf2_ros::StaticTransformBroadcaster>(this);
+    geometry_msgs::msg::TransformStamped infraredTransform;
+    infraredTransform.header.stamp = now();
+    infraredTransform.header.frame_id = "base_link";
+    infraredTransform.child_frame_id = "tof";
+    infraredTransform.transform.rotation = EPuckPublisher::euler2quaternion(0, 0, 0);
+    infraredTransform.transform.translation.x = 0;
+    infraredTransform.transform.translation.y = 0;
+    infraredTransform.transform.translation.z = 0;
+    mInfraredBroadcasters[8]->sendTransform(infraredTransform);
 
-    RCLCPP_INFO(this->get_logger(), "EPuck Driver has been initialized");
-    RCLCPP_INFO(this->get_logger(), "Driver mode: %s", type.c_str());
+    RCLCPP_INFO(get_logger(), "EPuck Driver has been initialized");
+    RCLCPP_INFO(get_logger(), "Driver mode: %s", type.c_str());
   }
 
-  ~EPuckPublisher() { close(fh); }
+  ~EPuckPublisher() { close(mFh); }
 
 private:
-  void reset_odometry() {
-    prev_left_wheel_raw = 0;
-    prev_right_wheel_raw = 0;
-    odom_left_overflow = 0;
-    odom_right_overflow = 0;
-    prev_position_x = 0;
-    prev_position_y = 0;
-    prev_angle = 0;
+  void resetOdometry() {
+    mPrevLeftWheelRaw = 0;
+    mPrevRightWheelRaw = 0;
+    mOdomLeftOverflow = 0;
+    mOdomRightOverflow = 0;
+    mPrevPositionX = 0;
+    mPrevPositionY = 0;
+    mPrevAngle = 0;
   }
 
-  rcl_interfaces::msg::SetParametersResult param_change_callback(std::vector<rclcpp::Parameter> parameters) {
+  rcl_interfaces::msg::SetParametersResult paramChangeCallback(std::vector<rclcpp::Parameter> parameters) {
     auto result = rcl_interfaces::msg::SetParametersResult();
     result.successful = true;
 
     for (auto parameter : parameters) {
       if (parameter.get_name() == "wheel_distance") {
-        reset_odometry();
-        wheel_distance = static_cast<float>(parameter.as_double());
+        resetOdometry();
+        mWheelDistance = static_cast<float>(parameter.as_double());
       } else if (parameter.get_name() == "wheel_radius") {
-        reset_odometry();
-        wheel_radius = static_cast<float>(parameter.as_double());
+        resetOdometry();
+        mWheelRadius = static_cast<float>(parameter.as_double());
       }
 
-      RCLCPP_INFO(this->get_logger(), "Parameter '%s' has changed to %s", parameter.get_name().c_str(),
+      RCLCPP_INFO(get_logger(), "Parameter '%s' has changed to %s", parameter.get_name().c_str(),
                   parameter.value_to_string().c_str());
     }
 
     return result;
   }
 
-  static float intensity_to_distance(int p_x) {
+  static float intensity2distance(int pX) {
     for (unsigned int i = 0; i < INFRARED_TABLE.size() - 1; i++) {
-      if (INFRARED_TABLE[i][1] >= p_x && INFRARED_TABLE[i + 1][1] < p_x) {
-        const float b_x = INFRARED_TABLE[i][1];
-        const float b_y = INFRARED_TABLE[i][0];
-        const float a_x = INFRARED_TABLE[i + 1][1];
-        const float a_y = INFRARED_TABLE[i + 1][0];
-        const float p_y = ((b_y - a_y) / (b_x - a_x)) * (p_x - a_x) + a_y;
-        return p_y;
+      if (INFRARED_TABLE[i][1] >= pX && INFRARED_TABLE[i + 1][1] < pX) {
+        const float bX = INFRARED_TABLE[i][1];
+        const float bY = INFRARED_TABLE[i][0];
+        const float aX = INFRARED_TABLE[i + 1][1];
+        const float aY = INFRARED_TABLE[i + 1][0];
+        const float pY = ((bY - aY) / (bX - aX)) * (pX - aX) + aY;
+        return pY;
       }
     }
     return OUT_OF_RANGE;
   }
 
-  static geometry_msgs::msg::Quaternion euler_to_quaternion(double roll, double pitch, double yaw) {
+  static geometry_msgs::msg::Quaternion euler2quaternion(double roll, double pitch, double yaw) {
     geometry_msgs::msg::Quaternion q;
     q.x = sin(roll / 2) * cos(pitch / 2) * cos(yaw / 2) - cos(roll / 2) * sin(pitch / 2) * sin(yaw / 2);
     q.y = cos(roll / 2) * sin(pitch / 2) * cos(yaw / 2) + sin(roll / 2) * cos(pitch / 2) * sin(yaw / 2);
@@ -218,27 +218,27 @@ private:
     return q;
   }
 
-  void on_cmd_vel_received(const geometry_msgs::msg::Twist::SharedPtr msg) {
-    const double left_velocity = (2.0 * msg->linear.x - msg->angular.z * wheel_distance) / (2.0 * wheel_radius);
-    const double right_velocity = (2.0 * msg->linear.x + msg->angular.z * wheel_distance) / (2.0 * wheel_radius);
+  void onCmdVelReceived(const geometry_msgs::msg::Twist::SharedPtr msg) {
+    const double leftVelocity = (2.0 * msg->linear.x - msg->angular.z * mWheelDistance) / (2.0 * mWheelRadius);
+    const double rightVelocity = (2.0 * msg->linear.x + msg->angular.z * mWheelDistance) / (2.0 * mWheelRadius);
 
-    const int left_velocity_big = CLIP(left_velocity / 0.0068, -1108, 1108);
-    const int right_velocity_big = CLIP(right_velocity / 0.0068, -1108, 1108);
+    const int leftVelocityBig = CLIP(leftVelocity / 0.0068, -1108, 1108);
+    const int rightVelocityBig = CLIP(rightVelocity / 0.0068, -1108, 1108);
 
-    RCLCPP_INFO(this->get_logger(), "New velocity, left %d and right %d", left_velocity_big, right_velocity_big);
+    RCLCPP_INFO(get_logger(), "New velocity, left %d and right %d", leftVelocityBig, rightVelocityBig);
 
-    msg_actuators[0] = left_velocity_big & 0xFF;
-    msg_actuators[1] = (left_velocity_big >> 8) & 0xFF;
-    msg_actuators[2] = right_velocity_big & 0xFF;
-    msg_actuators[3] = (right_velocity_big >> 8) & 0xFF;
+    mMsgActuators[0] = leftVelocityBig & 0xFF;
+    mMsgActuators[1] = (leftVelocityBig >> 8) & 0xFF;
+    mMsgActuators[2] = rightVelocityBig & 0xFF;
+    mMsgActuators[3] = (rightVelocityBig >> 8) & 0xFF;
   }
 
-  void publish_distance_data(rclcpp::Time &stamp) {
+  void publishDistanceData(rclcpp::Time &stamp) {
     // Decode measurements
     float dist[8];
     for (int i = 0; i < 8; i++) {
-      const int distance_intensity = msg_sensors[i * 2] + (msg_sensors[i * 2 + 1] << 8);
-      float distance = EPuckPublisher::intensity_to_distance(distance_intensity) + SENSOR_DIST_FROM_CENTER;
+      const int distanceIntensity = mMsgSensors[i * 2] + (mMsgSensors[i * 2 + 1] << 8);
+      float distance = EPuckPublisher::intensity2distance(distanceIntensity) + SENSOR_DIST_FROM_CENTER;
       dist[i] = distance;
     }
 
@@ -275,77 +275,76 @@ private:
       OUT_OF_RANGE,  // 135
       dist[4],       // 150
     };
-    laser_publisher->publish(msg);
+    mLaserPublisher->publish(msg);
 
     // Create Range messages
     for (int i = 0; i < 8; i++) {
-      auto msg_range = sensor_msgs::msg::Range();
-      msg_range.header.stamp = stamp;
-      msg_range.header.frame_id = "ps" + std::to_string(i);
-      msg_range.radiation_type = sensor_msgs::msg::Range::INFRARED;
-      msg_range.min_range = 0.05 + SENSOR_DIST_FROM_CENTER;
-      msg_range.min_range = 0.005 + SENSOR_DIST_FROM_CENTER;
-      msg_range.range = dist[i];
-      range_publisher[i]->publish(msg_range);
+      auto msgRange = sensor_msgs::msg::Range();
+      msgRange.header.stamp = stamp;
+      msgRange.header.frame_id = "ps" + std::to_string(i);
+      msgRange.radiation_type = sensor_msgs::msg::Range::INFRARED;
+      msgRange.min_range = 0.05 + SENSOR_DIST_FROM_CENTER;
+      msgRange.min_range = 0.005 + SENSOR_DIST_FROM_CENTER;
+      msgRange.range = dist[i];
+      mRangePublisher[i]->publish(msgRange);
     }
   }
 
-  void publish_odometry_data(rclcpp::Time &stamp) {
-    const int16_t left_wheel_raw = (msg_sensors[41] & 0x00FF) | ((msg_sensors[42] << 8) & 0xFF00);
-    const int16_t right_wheel_raw = (msg_sensors[43] & 0x00FF) | ((msg_sensors[44] << 8) & 0xFF00);
-    const float sample_period_s = (i2c_main_err_cnt + 1) * PERIOD_S;
+  void publishOdometryData(rclcpp::Time &stamp) {
+    const int16_t leftWheelRaw = (mMsgSensors[41] & 0x00FF) | ((mMsgSensors[42] << 8) & 0xFF00);
+    const int16_t rightWheelRaw = (mMsgSensors[43] & 0x00FF) | ((mMsgSensors[44] << 8) & 0xFF00);
+    const float samplePeriodS = (mI2cMainErrCnt + 1) * PERIOD_S;
 
     // Handle overflow
     // The MCU can handle only 2 bytes of ticks (about 4m), therefore this code allows us to
     // track even when the number of ticks has reached maximum value of 2^15. It is based on
     // detecting the overflow and updating counter `odom_left_overflow`/`odom_right_overflow`.
-    const int64_t prev_left_wheel_corrected = odom_left_overflow * POW2(16) + prev_left_wheel_raw;
-    const int64_t prev_right_wheel_corrected = odom_right_overflow * POW2(16) + prev_right_wheel_raw;
-    if (abs((int64_t)prev_left_wheel_raw - (int64_t)left_wheel_raw) > POW2(15) - ODOM_OVERFLOW_GRACE_TICKS)
-      odom_left_overflow = (prev_left_wheel_raw > 0 && left_wheel_raw < 0) ? odom_left_overflow + 1 : odom_left_overflow - 1;
-    if (abs((int64_t)prev_right_wheel_raw - (int64_t)right_wheel_raw) > POW2(15) - ODOM_OVERFLOW_GRACE_TICKS)
-      odom_right_overflow =
-        (prev_right_wheel_raw > 0 && right_wheel_raw < 0) ? odom_right_overflow + 1 : odom_right_overflow - 1;
-    const int64_t left_wheel_corrected = odom_left_overflow * POW2(16) + left_wheel_raw;
-    const int64_t right_wheel_corrected = odom_right_overflow * POW2(16) + right_wheel_raw;
-    const float left_wheel_rad = left_wheel_corrected / (ENCODER_RESOLUTION / (2 * M_PI));
-    const float right_wheel_rad = right_wheel_corrected / (ENCODER_RESOLUTION / (2 * M_PI));
-    const float prev_left_wheel_rad = prev_left_wheel_corrected / (ENCODER_RESOLUTION / (2 * M_PI));
-    const float prev_right_wheel_rad = prev_right_wheel_corrected / (ENCODER_RESOLUTION / (2 * M_PI));
+    const int64_t prevLeftWheelCorrected = mOdomLeftOverflow * POW2(16) + mPrevLeftWheelRaw;
+    const int64_t prevRightWheelCorrected = mOdomRightOverflow * POW2(16) + mPrevRightWheelRaw;
+    if (abs((int64_t)mPrevLeftWheelRaw - (int64_t)leftWheelRaw) > POW2(15) - ODOM_OVERFLOW_GRACE_TICKS)
+      mOdomLeftOverflow = (mPrevLeftWheelRaw > 0 && leftWheelRaw < 0) ? mOdomLeftOverflow + 1 : mOdomLeftOverflow - 1;
+    if (abs((int64_t)mPrevRightWheelRaw - (int64_t)rightWheelRaw) > POW2(15) - ODOM_OVERFLOW_GRACE_TICKS)
+      mOdomRightOverflow = (mPrevRightWheelRaw > 0 && rightWheelRaw < 0) ? mOdomRightOverflow + 1 : mOdomRightOverflow - 1;
+    const int64_t leftWheelCorrected = mOdomLeftOverflow * POW2(16) + leftWheelRaw;
+    const int64_t rightWheelCorrected = mOdomRightOverflow * POW2(16) + rightWheelRaw;
+    const float leftWheelRad = leftWheelCorrected / (ENCODER_RESOLUTION / (2 * M_PI));
+    const float right_wheel_rad = rightWheelCorrected / (ENCODER_RESOLUTION / (2 * M_PI));
+    const float prevLeftWheelRad = prevLeftWheelCorrected / (ENCODER_RESOLUTION / (2 * M_PI));
+    const float prevRightWheelRad = prevRightWheelCorrected / (ENCODER_RESOLUTION / (2 * M_PI));
 
     // Calculate velocities
-    const float v_left_rad = (left_wheel_rad - prev_left_wheel_rad) / sample_period_s;
-    const float v_right_rad = (right_wheel_rad - prev_right_wheel_rad) / sample_period_s;
-    const float v_left = v_left_rad * this->wheel_radius;
-    const float v_right = v_right_rad * this->wheel_radius;
-    const float v = (v_left + v_right) / 2;
-    const float omega = (v_right - v_left) / this->wheel_distance;
+    const float vLeftRad = (leftWheelRad - prevLeftWheelRad) / samplePeriodS;
+    const float vRightRad = (right_wheel_rad - prevRightWheelRad) / samplePeriodS;
+    const float vLeft = vLeftRad * mWheelRadius;
+    const float vRight = vRightRad * mWheelRadius;
+    const float v = (vLeft + vRight) / 2;
+    const float omega = (vRight - vLeft) / mWheelDistance;
 
     // Calculate position & angle
     // Fourth order Runge - Kutta
     // Reference: https://www.cs.cmu.edu/~16311/s07/labs/NXTLabs/Lab%203.html
-    const float k00 = v * cos(this->prev_angle);
-    const float k01 = v * sin(this->prev_angle);
+    const float k00 = v * cos(mPrevAngle);
+    const float k01 = v * sin(mPrevAngle);
     const float k02 = omega;
-    const float k10 = v * cos(this->prev_angle + sample_period_s * k02 / 2);
-    const float k11 = v * sin(this->prev_angle + sample_period_s * k02 / 2);
+    const float k10 = v * cos(mPrevAngle + samplePeriodS * k02 / 2);
+    const float k11 = v * sin(mPrevAngle + samplePeriodS * k02 / 2);
     const float k12 = omega;
-    const float k20 = v * cos(this->prev_angle + sample_period_s * k12 / 2);
-    const float k21 = v * sin(this->prev_angle + sample_period_s * k12 / 2);
+    const float k20 = v * cos(mPrevAngle + samplePeriodS * k12 / 2);
+    const float k21 = v * sin(mPrevAngle + samplePeriodS * k12 / 2);
     const float k22 = omega;
-    const float k30 = v * cos(this->prev_angle + sample_period_s * k22 / 2);
-    const float k31 = v * sin(this->prev_angle + sample_period_s * k22 / 2);
+    const float k30 = v * cos(mPrevAngle + samplePeriodS * k22 / 2);
+    const float k31 = v * sin(mPrevAngle + samplePeriodS * k22 / 2);
     const float k32 = omega;
-    const float position_x = this->prev_position_x + (sample_period_s / 6) * (k00 + 2 * (k10 + k20) + k30);
-    const float position_y = this->prev_position_y + (sample_period_s / 6) * (k01 + 2 * (k11 + k21) + k31);
-    const float angle = this->prev_angle + (sample_period_s / 6) * (k02 + 2 * (k12 + k22) + k32);
+    const float positionX = mPrevPositionX + (samplePeriodS / 6) * (k00 + 2 * (k10 + k20) + k30);
+    const float positionY = mPrevPositionY + (samplePeriodS / 6) * (k01 + 2 * (k11 + k21) + k31);
+    const float angle = mPrevAngle + (samplePeriodS / 6) * (k02 + 2 * (k12 + k22) + k32);
 
     // Update variables
-    this->prev_position_x = position_x;
-    this->prev_position_y = position_y;
-    this->prev_angle = angle;
-    this->prev_left_wheel_raw = left_wheel_raw;
-    this->prev_right_wheel_raw = right_wheel_raw;
+    mPrevPositionX = positionX;
+    mPrevPositionY = positionY;
+    mPrevAngle = angle;
+    mPrevLeftWheelRaw = leftWheelRaw;
+    mPrevRightWheelRaw = rightWheelRaw;
 
     // Pack & publish odometry
     nav_msgs::msg::Odometry msg;
@@ -354,96 +353,96 @@ private:
     msg.child_frame_id = "base_link";
     msg.twist.twist.linear.x = v;
     msg.twist.twist.linear.z = omega;
-    msg.pose.pose.position.x = position_x;
-    msg.pose.pose.position.y = position_y;
-    msg.pose.pose.orientation = euler_to_quaternion(0, 0, angle);
-    odometry_publisher->publish(msg);
+    msg.pose.pose.position.x = positionX;
+    msg.pose.pose.position.y = positionY;
+    msg.pose.pose.orientation = euler2quaternion(0, 0, angle);
+    mOdometryPublisher->publish(msg);
 
     // Pack & publish transforms
     geometry_msgs::msg::TransformStamped tf;
     tf.header.stamp = stamp;
     tf.header.frame_id = "odom";
     tf.child_frame_id = "base_link";
-    tf.transform.translation.x = position_x;
-    tf.transform.translation.y = position_y;
+    tf.transform.translation.x = positionX;
+    tf.transform.translation.y = positionY;
     tf.transform.translation.z = 0.0;
-    tf.transform.rotation = euler_to_quaternion(0, 0, angle);
-    dynamic_broadcaster->sendTransform(tf);
+    tf.transform.rotation = euler2quaternion(0, 0, angle);
+    mDynamicBroadcaster->sendTransform(tf);
   }
 
-  void update_callback() {
+  void updateCallback() {
     int success;
-    int retry_count;
+    int retryCount;
     rclcpp::Time stamp;
 
     // I2C: Set address
-    retry_count = 1;
+    retryCount = 1;
     success = 0;
-    while (!success && retry_count > 0) {
-      success = i2c_main->set_address(0x1F);
-      retry_count--;
+    while (!success && retryCount > 0) {
+      success = mI2cMain->set_address(0x1F);
+      retryCount--;
     }
 
     // I2C: Write/Read
-    retry_count = 3;
+    retryCount = 3;
     success = 0;
-    while (!success && retry_count > 0) {
+    while (!success && retryCount > 0) {
       // Write
-      msg_actuators[MSG_ACTUATORS_SIZE - 1] = 0;
+      mMsgActuators[MSG_ACTUATORS_SIZE - 1] = 0;
       for (int i = 0; i < MSG_ACTUATORS_SIZE - 1; i++)
-        msg_actuators[MSG_ACTUATORS_SIZE - 1] ^= msg_actuators[i];
-      success = (i2c_main->write_data(msg_actuators, MSG_ACTUATORS_SIZE) == MSG_ACTUATORS_SIZE);
+        mMsgActuators[MSG_ACTUATORS_SIZE - 1] ^= mMsgActuators[i];
+      success = (mI2cMain->write_data(mMsgActuators, MSG_ACTUATORS_SIZE) == MSG_ACTUATORS_SIZE);
 
       // Read
-      success &= (i2c_main->read_data(msg_sensors, MSG_SENSORS_SIZE) == MSG_SENSORS_SIZE);
+      success &= (mI2cMain->read_data(mMsgSensors, MSG_SENSORS_SIZE) == MSG_SENSORS_SIZE);
       char checksum = 0;
       for (int i = 0; i < MSG_SENSORS_SIZE - 1; i++)
-        checksum ^= msg_sensors[i];
-      success &= (checksum == msg_sensors[MSG_SENSORS_SIZE - 1]);
+        checksum ^= mMsgSensors[i];
+      success &= (checksum == mMsgSensors[MSG_SENSORS_SIZE - 1]);
 
-      retry_count--;
+      retryCount--;
     }
 
     stamp = now();
 
     if (success) {
-      publish_distance_data(stamp);
-      publish_odometry_data(stamp);
-      i2c_main_err_cnt = 0;
+      publishDistanceData(stamp);
+      publishOdometryData(stamp);
+      mI2cMainErrCnt = 0;
     } else {
-      i2c_main_err_cnt++;
+      mI2cMainErrCnt++;
     }
   }
 
-  OnSetParametersCallbackHandle::SharedPtr callback_handler;
+  OnSetParametersCallbackHandle::SharedPtr mCallbackHandler;
 
-  rclcpp::TimerBase::SharedPtr timer;
-  rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr laser_publisher;
-  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odometry_publisher;
-  rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr range_publisher[9];
-  rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscription;
+  rclcpp::TimerBase::SharedPtr mTimer;
+  rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr mLaserPublisher;
+  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr mOdometryPublisher;
+  rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr mRangePublisher[9];
+  rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr mSubscription;
 
-  std::unique_ptr<tf2_ros::StaticTransformBroadcaster> laser_broadcaster;
-  std::unique_ptr<tf2_ros::TransformBroadcaster> dynamic_broadcaster;
-  std::unique_ptr<tf2_ros::StaticTransformBroadcaster> infrared_broadcasters[9];
+  std::unique_ptr<tf2_ros::StaticTransformBroadcaster> mLaserBroadcaster;
+  std::unique_ptr<tf2_ros::TransformBroadcaster> mDynamicBroadcaster;
+  std::unique_ptr<tf2_ros::StaticTransformBroadcaster> mInfraredBroadcasters[9];
 
-  std::unique_ptr<I2CWrapper> i2c_main;
+  std::unique_ptr<I2CWrapper> mI2cMain;
 
-  int fh;
-  char msg_actuators[MSG_ACTUATORS_SIZE];
-  char msg_sensors[MSG_SENSORS_SIZE];
+  int mFh;
+  char mMsgActuators[MSG_ACTUATORS_SIZE];
+  char mMsgSensors[MSG_SENSORS_SIZE];
 
-  float prev_angle;
-  float prev_position_x;
-  float prev_position_y;
-  int16_t prev_left_wheel_raw;
-  int16_t prev_right_wheel_raw;
-  int odom_left_overflow;
-  int odom_right_overflow;
-  int i2c_main_err_cnt;
+  float mPrevAngle;
+  float mPrevPositionX;
+  float mPrevPositionY;
+  int16_t mPrevLeftWheelRaw;
+  int16_t mPrevRightWheelRaw;
+  int mOdomLeftOverflow;
+  int mOdomRightOverflow;
+  int mI2cMainErrCnt;
 
-  float wheel_distance;
-  float wheel_radius;
+  float mWheelDistance;
+  float mWheelRadius;
 };
 
 int main(int argc, char *argv[]) {
