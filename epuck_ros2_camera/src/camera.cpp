@@ -95,8 +95,7 @@ private:
 
   void timer_callback() {
     if (publisher_compressed->get_subscription_count() > 0 ||
-        publisher_raw->get_subscription_count())
-    {
+        publisher_raw->get_subscription_count()) {
       if (!v4l2_initialized) {
         pipuck_v4l2_init();
         v4l2_initialized = true;
