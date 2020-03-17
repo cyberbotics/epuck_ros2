@@ -100,6 +100,9 @@ public:
     else
       mI2cMain = std::make_unique<I2CWrapperHW>("/dev/i2c-4");
     mTofInitialized = tofInit(0, 0x29, 4);
+    if (!mTofInitialized) {
+      RCLCPP_WARN(get_logger(), "ToF device is not accessible!");
+    }
 
     // Initialize the values
     std::fill(mMsgActuators, mMsgActuators + MSG_ACTUATORS_SIZE, 0);
@@ -114,6 +117,7 @@ public:
     mOdometryPublisher = create_publisher<nav_msgs::msg::Odometry>("odom", 1);
     for (int i = 0; i < 8; i++)
       mRangePublisher[i] = create_publisher<sensor_msgs::msg::Range>("ps" + std::to_string(i), 1);
+    mRangeTofPublisher = create_publisher<sensor_msgs::msg::Range>("tof", 1);
     mTimer = create_wall_timer(std::chrono::milliseconds(PERIOD_MS), std::bind(&EPuckPublisher::updateCallback, this));
 
     // Dynamic tf broadcaster: Odometry
@@ -238,10 +242,14 @@ private:
   void publishDistanceData(rclcpp::Time &stamp) {
     // Decode measurements
     float dist[8];
+    float distTof = OUT_OF_RANGE;
     for (int i = 0; i < 8; i++) {
       const int distanceIntensity = mMsgSensors[i * 2] + (mMsgSensors[i * 2 + 1] << 8);
       float distance = EPuckPublisher::intensity2distance(distanceIntensity) + SENSOR_DIST_FROM_CENTER;
       dist[i] = distance;
+    }
+    if (mTofInitialized) {
+      distTof = tofReadDistance() * 1000.0;
     }
 
     // Create LaserScan message
@@ -265,7 +273,7 @@ private:
       dist[1],       // -45
       OUT_OF_RANGE,  // -30
       dist[0],       // -15
-      OUT_OF_RANGE,  // 0
+      distTof,       // 0
       dist[7],       // 15
       OUT_OF_RANGE,  // 30
       dist[6],       // 45
@@ -277,9 +285,6 @@ private:
       OUT_OF_RANGE,  // 135
       dist[4],       // 150
     };
-    if (mTofInitialized) {
-      msg.ranges[msg.ranges.size() / 2] = tofReadDistance() * 1000.0;
-    }
     mLaserPublisher->publish(msg);
 
     // Create Range messages
@@ -292,6 +297,16 @@ private:
       msgRange.min_range = 0.005 + SENSOR_DIST_FROM_CENTER;
       msgRange.range = dist[i];
       mRangePublisher[i]->publish(msgRange);
+    }
+    if (mTofInitialized) {
+      auto msgRange = sensor_msgs::msg::Range();
+      msgRange.header.stamp = stamp;
+      msgRange.header.frame_id = "tof";
+      msgRange.radiation_type = sensor_msgs::msg::Range::INFRARED;
+      msgRange.min_range = 0.05 + SENSOR_DIST_FROM_CENTER;
+      msgRange.min_range = 0.005 + SENSOR_DIST_FROM_CENTER;
+      msgRange.range = distTof;
+      mRangeTofPublisher->publish(msgRange);
     }
   }
 
@@ -424,7 +439,8 @@ private:
   rclcpp::TimerBase::SharedPtr mTimer;
   rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr mLaserPublisher;
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr mOdometryPublisher;
-  rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr mRangePublisher[9];
+  rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr mRangePublisher[8];
+  rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr mRangeTofPublisher;
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr mSubscription;
 
   std::unique_ptr<tf2_ros::StaticTransformBroadcaster> mLaserBroadcaster;
