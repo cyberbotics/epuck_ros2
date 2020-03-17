@@ -1,4 +1,4 @@
-// Copyright 2020 Cyberbotics
+// Copyright 1996-2020 Cyberbotics Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -81,19 +81,17 @@ public:
   EPuckPublisher(int argc, char *argv[]) : Node("pipuck_driver") {
     // Parse arguments
     std::string type = "hw";
-    for (int i = 1; i < argc; i++)
+    for (int i = 1; i < argc; i++) {
       if (strcmp(argv[i], "--type") == 0) {
         i++;
         type = argv[i];
       }
+    }
 
     wheel_distance = declare_parameter<float>("wheel_distance", DEFAULT_WHEEL_DISTANCE);
     wheel_radius = declare_parameter<float>("wheel_radius", DEFAULT_WHEEL_RADIUS);
-    /*
     callback_handler =
-      this->add_on_set_parameters_callback(std::bind(&EPuckPublisher::param_change_callback, this,
-        std::placeholders::_1));
-    */
+      this->add_on_set_parameters_callback(std::bind(&EPuckPublisher::param_change_callback, this, std::placeholders::_1));
 
     // Create I2C object
     if (type == "test")
@@ -197,7 +195,7 @@ private:
   }
 
   static float intensity_to_distance(int p_x) {
-    for (unsigned int i = 0; i < INFRARED_TABLE.size() - 1; i++)
+    for (unsigned int i = 0; i < INFRARED_TABLE.size() - 1; i++) {
       if (INFRARED_TABLE[i][1] >= p_x && INFRARED_TABLE[i + 1][1] < p_x) {
         const float b_x = INFRARED_TABLE[i][1];
         const float b_y = INFRARED_TABLE[i][0];
@@ -206,6 +204,7 @@ private:
         const float p_y = ((b_y - a_y) / (b_x - a_x)) * (p_x - a_x) + a_y;
         return p_y;
       }
+    }
     return OUT_OF_RANGE;
   }
 
