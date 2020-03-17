@@ -16,12 +16,17 @@
 
 import time
 import rclpy
+from math import pi
+import unittest
 import launch
 import launch_ros.actions
-import unittest
 import launch_testing.actions
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Range, LaserScan
+from nav_msgs.msg import Odometry
+from rcl_interfaces.srv import SetParameters
+from rclpy.parameter import ParameterType, ParameterValue
+from rcl_interfaces.msg._parameter import Parameter
 
 
 SENSORS_SIZE = 47
@@ -39,6 +44,9 @@ def arr2int16(arr):
 
 def int162arr(val):
     """Little-endian formulation."""
+    val = int(val)
+    if val < 0:
+        val += 2**16
     arr = [
         val & 0xFF,
         (val >> 8) & 0xFF
@@ -68,6 +76,14 @@ def write_params_to_i2c(params, idx=4):
         if key[:2] == 'ps':
             sid = int(key[2])
             buffer[2 * sid:2 * sid + 2] = int162arr(params[key])
+        elif key == 'left_position':
+            buffer[41:43] = int162arr(params[key])
+        elif key == 'right_position':
+            buffer[43:45] = int162arr(params[key])
+
+    buffer[SENSORS_SIZE - 1] = 0
+    for i in range(SENSORS_SIZE - 1):
+        buffer[SENSORS_SIZE - 1] ^= buffer[i]
 
     # Write the buffer
     for _ in range(3):
@@ -121,12 +137,21 @@ def publish_twist(node, linear_x=0.0, linear_y=0.0, angular_z=0.0):
     node.destroy_publisher(pub)
 
 
+def set_param(cli, name, value):
+    req = SetParameters.Request()
+    param_value = ParameterValue(
+        double_value=value, type=ParameterType.PARAMETER_DOUBLE)
+    param = Parameter(name=name, value=param_value)
+    req.parameters.append(param)
+    cli.call_async(req)
+
+
 def generate_test_description():
     """
     Launch decription configuration.
 
     To run the tests you can use either `launch_test` directly as:
-    $ launch_test src/epuck_ros2/epuck_ros2_cpp/test/test_controller.py
+    $ launch_test src/epuck_ros2/epuck_ros2_cpp/test/test_driver.py
     or `colcon`:
     $ colcon test --packages-select epuck_ros2_cpp
 
@@ -137,7 +162,7 @@ def generate_test_description():
     """
     controller = launch_ros.actions.Node(
         package='epuck_ros2_cpp',
-        node_executable='controller',
+        node_executable='driver',
         output='screen',
         arguments=['--type', 'test']
     )
@@ -158,7 +183,7 @@ class TestController(unittest.TestCase):
         rclpy.shutdown()
 
     def setUp(self):
-        self.node = rclpy.create_node('test_controller')
+        self.node = rclpy.create_node('driver_tester')
 
     def tearDown(self):
         self.node.destroy_node()
@@ -167,7 +192,6 @@ class TestController(unittest.TestCase):
         publish_twist(self.node, angular_z=1.0)
 
         _, buffer = read_params_from_i2c()
-        print(buffer)
         checksum = 0
         for i in range(ACTUATOR_SIZE - 1):
             checksum ^= buffer[i]
@@ -229,22 +253,77 @@ class TestController(unittest.TestCase):
             condition, 'The node hasn\'t published any distance measurement')
 
     def test_laser_scan(self, launch_service, proc_output):
-        write_params_to_i2c({'ps4': 120})
+        write_params_to_i2c({'ps3': 120})
         condition = check_topic_condition(
             self.node,
             LaserScan,
-            'laser',
+            'scan',
             lambda msg: abs(msg.ranges[0] - 0.05 -
                             DISTANCE_FROM_CENTER) < 1E-3)
         self.assertTrue(
-            condition, 'Sensor ps4 at -150 doesn\'t give a good results')
+            condition, 'Sensor ps3 at -150 doesn\'t give a good results')
 
-        write_params_to_i2c({'ps5': 120})
+        write_params_to_i2c({'ps2': 120})
         condition = check_topic_condition(
             self.node,
             LaserScan,
-            'laser',
+            'scan',
             lambda msg: abs(msg.ranges[4] - 0.05 - DISTANCE_FROM_CENTER) < 1E-3
         )
         self.assertTrue(
-            condition, 'Sensor ps5 at -90 doesn\'t give a good results')
+            condition, 'Sensor ps2 at -90 doesn\'t give a good results')
+
+    def test_odometry_forward(self, launch_service, proc_output):
+        # This will restart odometry
+        write_params_to_i2c({'left_position': 0})
+        write_params_to_i2c({'right_position': 0})
+        cli = self.node.create_client(
+            SetParameters, 'pipuck_driver/set_parameters')
+        cli.wait_for_service(timeout_sec=1.0)
+        set_param(cli, 'wheel_distance', 0.05685)
+        set_param(cli, 'wheel_radius', 0.02)
+        time.sleep(0.1)
+
+        # Set odometry to I2C and verify
+        write_params_to_i2c({'left_position': 2000 / (2 * pi)})
+        write_params_to_i2c({'right_position': 2000 / (2 * pi)})
+        condition = check_topic_condition(
+            self.node,
+            Odometry,
+            'odom',
+            lambda msg: abs(msg.pose.pose.position.x > 0.01)
+        )
+        self.assertTrue(condition, 'Should move forward')
+
+        # Set odometry to I2C and verify
+        write_params_to_i2c({'left_position': 4000 / (2 * pi)})
+        write_params_to_i2c({'right_position': 4000 / (2 * pi)})
+        condition = check_topic_condition(
+            self.node,
+            Odometry,
+            'odom',
+            lambda msg: abs(msg.pose.pose.position.x > 0.02)
+        )
+        self.assertTrue(condition, 'Should move more forward')
+
+    def test_odometry_backward(self, launch_service, proc_output):
+        # This will restart odometry
+        write_params_to_i2c({'left_position': 0})
+        write_params_to_i2c({'right_position': 0})
+        cli = self.node.create_client(
+            SetParameters, 'pipuck_driver/set_parameters')
+        cli.wait_for_service(timeout_sec=1.0)
+        set_param(cli, 'wheel_distance', 0.05685)
+        set_param(cli, 'wheel_radius', 0.02)
+        time.sleep(0.1)
+
+        # Set odometry to I2C and verify
+        write_params_to_i2c({'left_position': -2000 / (2 * pi)})
+        write_params_to_i2c({'right_position': -2000 / (2 * pi)})
+        condition = check_topic_condition(
+            self.node,
+            Odometry,
+            'odom',
+            lambda msg: abs(msg.pose.pose.position.x < -0.01)
+        )
+        self.assertTrue(condition, 'Should move backward')
