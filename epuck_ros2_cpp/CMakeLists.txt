@@ -24,10 +24,15 @@ find_package(tf2_ros REQUIRED)
 find_package(nav_msgs REQUIRED)
 
 
-add_executable(driver src/driver.cpp)
+add_executable(driver 
+  src/driver.cpp
+  src/vl53l0x/tof.c
+)
 target_include_directories(driver PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>)
+  $<INSTALL_INTERFACE:include>
+  src/vl53l0x
+)
 
 ament_target_dependencies(driver
   rclcpp

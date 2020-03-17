@@ -23,6 +23,7 @@ extern "C" {
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include "vl53l0x/tof.h"
 }
 
 #include <algorithm>
@@ -98,6 +99,7 @@ public:
       mI2cMain = std::make_unique<I2CWrapperTest>("/dev/i2c-4");
     else
       mI2cMain = std::make_unique<I2CWrapperHW>("/dev/i2c-4");
+    mTofInitialized = tofInit(0, 0x29, 4);
 
     // Initialize the values
     std::fill(mMsgActuators, mMsgActuators + MSG_ACTUATORS_SIZE, 0);
@@ -275,6 +277,9 @@ private:
       OUT_OF_RANGE,  // 135
       dist[4],       // 150
     };
+    if (mTofInitialized) {
+      msg.ranges[msg.ranges.size() / 2] = tofReadDistance() * 1000.0;
+    }
     mLaserPublisher->publish(msg);
 
     // Create Range messages
@@ -443,6 +448,8 @@ private:
 
   float mWheelDistance;
   float mWheelRadius;
+
+  int mTofInitialized;
 };
 
 int main(int argc, char *argv[]) {
