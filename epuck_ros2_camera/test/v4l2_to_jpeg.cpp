@@ -1,4 +1,4 @@
-// Copyright 2020 Cyberbotics
+// Copyright 1996-2020 Cyberbotics Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,9 +27,7 @@ extern "C" {
 #include <fstream>
 #include <iostream>
 
-void convert(
-  pipuck_image_t *input_image, pipuck_image_t *output_image,
-  std::string output_filename) {
+void convert(pipuck_image_t *input_image, pipuck_image_t *output_image, std::string output_filename) {
   std::ofstream file;
   file.open(output_filename, std::ios::out | std::ios::binary);
 

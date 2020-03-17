@@ -43,10 +43,39 @@ install(TARGETS driver
   DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
   find_package(launch_testing_ament_cmake REQUIRED)
+  find_package(ament_cmake_cppcheck REQUIRED)
+  find_package(ament_cmake_cpplint REQUIRED)
+  find_package(ament_cmake_copyright REQUIRED)
+  find_package(ament_cmake_lint_cmake REQUIRED)
+  find_package(ament_cmake_flake8 REQUIRED)
+  find_package(ament_cmake_pep257 REQUIRED)
+  find_package(ament_cmake_xmllint REQUIRED)
+  find_package(ament_cmake_clang_format REQUIRED)
 
-  ament_lint_auto_find_test_dependencies()
+  ament_cppcheck()
+  ament_cpplint(
+    MAX_LINE_LENGTH 128
+  )
+  ament_copyright()
+  ament_lint_cmake()
+  ament_flake8()
+  ament_pep257()
+  ament_xmllint()
+  ament_clang_format(
+    CONFIG_FILE "${CMAKE_CURRENT_SOURCE_DIR}/../.clang-format"
+  )
+
+  # `CONFIG_FILE` parameter hasn't been integrated into Debian upstream packages, but as soon as it is
+  # we can run the uncrustify test as well:
+  # https://github.com/ament/ament_lint/blob/091e47cb123d903926911bfdd6ca21672e5deae4/ament_cmake_uncrustify/cmake/ament_uncrustify.cmake#L56
+  # find_package(ament_cmake_uncrustify REQUIRED)
+  # ament_uncrustify(
+  #   TESTNAME "uncrustify_${PROJECT_NAME}"
+  #   CONFIG_FILE "${CMAKE_CURRENT_SOURCE_DIR}/../uncrustify.cfg"
+  #   MAX_LINE_LENGTH 128
+  #   "${_output_path}"
+  # )
   add_launch_test(
     "test/test_driver.py"
     TIMEOUT 60

@@ -15,16 +15,16 @@
 #include "epuck_ros2_camera/pipuck_jpeg.h"
 
 #include <assert.h>
-#include <stdio.h>
 #include <bcm_host.h>
-#include <interface/vcos/vcos.h>
 #include <interface/mmal/mmal.h>
-#include <interface/mmal/mmal_logging.h>
 #include <interface/mmal/mmal_buffer.h>
+#include <interface/mmal/mmal_logging.h>
+#include <interface/mmal/util/mmal_connection.h>
+#include <interface/mmal/util/mmal_default_components.h>
 #include <interface/mmal/util/mmal_util.h>
 #include <interface/mmal/util/mmal_util_params.h>
-#include <interface/mmal/util/mmal_default_components.h>
-#include <interface/mmal/util/mmal_connection.h>
+#include <interface/vcos/vcos.h>
+#include <stdio.h>
 
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
@@ -82,8 +82,7 @@ void pipuck_jpeg_init(pipuck_image_t *input_image, pipuck_image_t *output_image)
   encoder->output[0]->format->encoding = MMAL_ENCODING_JPEG;
   status = mmal_port_format_commit(encoder->output[0]);
   assert(status == MMAL_SUCCESS);
-  status = mmal_port_parameter_set_uint32(encoder->output[0], MMAL_PARAMETER_JPEG_Q_FACTOR,
-                                          output_image->quality);
+  status = mmal_port_parameter_set_uint32(encoder->output[0], MMAL_PARAMETER_JPEG_Q_FACTOR, output_image->quality);
   assert(status == MMAL_SUCCESS);
 
   // Configure buffers
@@ -91,11 +90,8 @@ void pipuck_jpeg_init(pipuck_image_t *input_image, pipuck_image_t *output_image)
   encoder->input[0]->buffer_size = encoder->input[0]->buffer_size_recommended;
   encoder->output[0]->buffer_num = encoder->output[0]->buffer_num_recommended;
   encoder->output[0]->buffer_size = encoder->output[0]->buffer_size_recommended;
-  printf("There are %d input buffers with size %d and %d output buffers with size %d\n",
-         encoder->input[0]->buffer_num,
-         encoder->input[0]->buffer_size,
-         encoder->output[0]->buffer_num,
-         encoder->output[0]->buffer_size);
+  printf("There are %d input buffers with size %d and %d output buffers with size %d\n", encoder->input[0]->buffer_num,
+         encoder->input[0]->buffer_size, encoder->output[0]->buffer_num, encoder->output[0]->buffer_size);
 
   // Enable ports
   status = mmal_port_enable(encoder->input[0], release_buffer_callback);
@@ -105,11 +101,9 @@ void pipuck_jpeg_init(pipuck_image_t *input_image, pipuck_image_t *output_image)
 
   // Create a buffer pool
   queue = mmal_queue_create();
-  pool_in = mmal_port_pool_create(encoder->input[0], encoder->input[0]->buffer_num,
-                                  encoder->input[0]->buffer_size);
+  pool_in = mmal_port_pool_create(encoder->input[0], encoder->input[0]->buffer_num, encoder->input[0]->buffer_size);
   assert(pool_in != 0);
-  pool_out = mmal_port_pool_create(encoder->output[0], encoder->output[0]->buffer_num,
-                                   encoder->output[0]->buffer_size);
+  pool_out = mmal_port_pool_create(encoder->output[0], encoder->output[0]->buffer_num, encoder->output[0]->buffer_size);
   assert(pool_out != 0);
 
   // Start component

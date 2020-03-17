@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Unit tests for pi-puck driver. It mocks I2C and the rest of ROS2 system."""
+
 import time
 import rclpy
 from math import pi
