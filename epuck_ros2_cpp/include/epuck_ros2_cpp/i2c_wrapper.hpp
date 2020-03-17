@@ -29,40 +29,40 @@ extern "C" {
 
 class I2CWrapper {
 public:
-  virtual int set_address(int address) = 0;
-  virtual int read_data(char *buffer, int size) = 0;
-  virtual int write_data(char *buffer, int size) = 0;
+  virtual int setAddress(int address) = 0;
+  virtual int readData(char *buffer, int size) = 0;
+  virtual int writeData(char *buffer, int size) = 0;
 };
 
 class I2CWrapperTest : public I2CWrapper {
 public:
   I2CWrapperTest() {}
   explicit I2CWrapperTest(std::string device) {
-    base_filename = "/tmp" + device;
+    mBaseFilename = "/tmp" + device;
 
     // Create folder
-    std::string folder = base_filename.substr(0, base_filename.find_last_of("/"));
+    std::string folder = mBaseFilename.substr(0, mBaseFilename.find_last_of("/"));
     mkdir(folder.c_str(), 0777);
     std::cout << "Folder " << folder << " is created" << std::endl;
   }
 
-  int set_address(int address) {
-    std::fstream stream(base_filename + "_ioctl", std::ios::out | std::ios::binary);
+  int setAddress(int address) {
+    std::fstream stream(mBaseFilename + "_ioctl", std::ios::out | std::ios::binary);
     stream << address << std::endl;
     stream.close();
     return 1;
   }
 
-  int read_data(char *buffer, int size) {
-    std::fstream stream(base_filename + "_read", std::ios::in | std::ios::binary);
+  int readData(char *buffer, int size) {
+    std::fstream stream(mBaseFilename + "_read", std::ios::in | std::ios::binary);
     stream.read(buffer, size);
     stream.close();
     return size;
   }
 
-  int write_data(char *buffer, int size) {
+  int writeData(char *buffer, int size) {
     std::fstream stream;
-    stream.open(base_filename + "_write", std::ios::out | std::ios::binary);
+    stream.open(mBaseFilename + "_write", std::ios::out | std::ios::binary);
 
     stream.write(buffer, size);
     stream.close();
@@ -70,7 +70,7 @@ public:
   }
 
 private:
-  std::string base_filename;
+  std::string mBaseFilename;
 };
 
 class I2CWrapperHW : public I2CWrapper {
@@ -78,20 +78,20 @@ public:
   I2CWrapperHW() {}
 
   explicit I2CWrapperHW(std::string device) {
-    fh = open(device.c_str(), O_RDWR);
-    std::cout << fh << std::endl;
-    if (fh < 0)
+    mFh = open(device.c_str(), O_RDWR);
+    std::cout << mFh << std::endl;
+    if (mFh < 0)
       std::cout << "Cannot open file: " << device << std::endl;
   }
 
-  int set_address(int address) { return ioctl(fh, I2C_SLAVE, address); }
+  int setAddress(int address) { return ioctl(mFh, I2C_SLAVE, address); }
 
-  int read_data(char *buffer, int size) { return read(fh, buffer, size); }
+  int readData(char *buffer, int size) { return read(mFh, buffer, size); }
 
-  int write_data(char *buffer, int size) { return write(fh, buffer, size); }
+  int writeData(char *buffer, int size) { return write(mFh, buffer, size); }
 
 private:
-  int fh;
+  int mFh;
 };
 
 #endif  // EPUCK_ROS2_CPP__I2C_WRAPPER_HPP_

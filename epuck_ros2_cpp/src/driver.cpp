@@ -379,7 +379,7 @@ private:
     retryCount = 1;
     success = 0;
     while (!success && retryCount > 0) {
-      success = mI2cMain->set_address(0x1F);
+      success = mI2cMain->setAddress(0x1F);
       retryCount--;
     }
 
@@ -391,10 +391,10 @@ private:
       mMsgActuators[MSG_ACTUATORS_SIZE - 1] = 0;
       for (int i = 0; i < MSG_ACTUATORS_SIZE - 1; i++)
         mMsgActuators[MSG_ACTUATORS_SIZE - 1] ^= mMsgActuators[i];
-      success = (mI2cMain->write_data(mMsgActuators, MSG_ACTUATORS_SIZE) == MSG_ACTUATORS_SIZE);
+      success = (mI2cMain->writeData(mMsgActuators, MSG_ACTUATORS_SIZE) == MSG_ACTUATORS_SIZE);
 
       // Read
-      success &= (mI2cMain->read_data(mMsgSensors, MSG_SENSORS_SIZE) == MSG_SENSORS_SIZE);
+      success &= (mI2cMain->readData(mMsgSensors, MSG_SENSORS_SIZE) == MSG_SENSORS_SIZE);
       char checksum = 0;
       for (int i = 0; i < MSG_SENSORS_SIZE - 1; i++)
         checksum ^= mMsgSensors[i];
