@@ -103,6 +103,7 @@ public:
     std::fill(msg_actuators, msg_actuators + MSG_ACTUATORS_SIZE, 0);
     std::fill(msg_sensors, msg_sensors + MSG_SENSORS_SIZE, 0);
     reset_odometry();
+    i2c_main_err_cnt = 0;
 
     // Create subscirbers and publishers
     subscription = this->create_subscription<geometry_msgs::msg::Twist>(
@@ -262,7 +263,7 @@ private:
       dist[1],       // -45
       OUT_OF_RANGE,  // -30
       dist[0],       // -15
-      OUT_OF_RANGE,  // dist['tof'], // 0
+      OUT_OF_RANGE,  // 0
       dist[7],       // 15
       OUT_OF_RANGE,  // 30
       dist[6],       // 45
@@ -292,6 +293,7 @@ private:
   void publish_odometry_data(rclcpp::Time &stamp) {
     const int16_t left_wheel_raw = (msg_sensors[41] & 0x00FF) | ((msg_sensors[42] << 8) & 0xFF00);
     const int16_t right_wheel_raw = (msg_sensors[43] & 0x00FF) | ((msg_sensors[44] << 8) & 0xFF00);
+    const float sample_period_s = (i2c_main_err_cnt + 1) * PERIOD_S;
 
     // Handle overflow
     // The MCU can handle only 2 bytes of ticks (about 4m), therefore this code allows us to
@@ -312,8 +314,8 @@ private:
     const float prev_right_wheel_rad = prev_right_wheel_corrected / (ENCODER_RESOLUTION / (2 * M_PI));
 
     // Calculate velocities
-    const float v_left_rad = (left_wheel_rad - prev_left_wheel_rad) / PERIOD_S;
-    const float v_right_rad = (right_wheel_rad - prev_right_wheel_rad) / PERIOD_S;
+    const float v_left_rad = (left_wheel_rad - prev_left_wheel_rad) / sample_period_s;
+    const float v_right_rad = (right_wheel_rad - prev_right_wheel_rad) / sample_period_s;
     const float v_left = v_left_rad * this->wheel_radius;
     const float v_right = v_right_rad * this->wheel_radius;
     const float v = (v_left + v_right) / 2;
@@ -325,18 +327,18 @@ private:
     const float k00 = v * cos(this->prev_angle);
     const float k01 = v * sin(this->prev_angle);
     const float k02 = omega;
-    const float k10 = v * cos(this->prev_angle + PERIOD_S * k02 / 2);
-    const float k11 = v * sin(this->prev_angle + PERIOD_S * k02 / 2);
+    const float k10 = v * cos(this->prev_angle + sample_period_s * k02 / 2);
+    const float k11 = v * sin(this->prev_angle + sample_period_s * k02 / 2);
     const float k12 = omega;
-    const float k20 = v * cos(this->prev_angle + PERIOD_S * k12 / 2);
-    const float k21 = v * sin(this->prev_angle + PERIOD_S * k12 / 2);
+    const float k20 = v * cos(this->prev_angle + sample_period_s * k12 / 2);
+    const float k21 = v * sin(this->prev_angle + sample_period_s * k12 / 2);
     const float k22 = omega;
-    const float k30 = v * cos(this->prev_angle + PERIOD_S * k22 / 2);
-    const float k31 = v * sin(this->prev_angle + PERIOD_S * k22 / 2);
+    const float k30 = v * cos(this->prev_angle + sample_period_s * k22 / 2);
+    const float k31 = v * sin(this->prev_angle + sample_period_s * k22 / 2);
     const float k32 = omega;
-    const float position_x = this->prev_position_x + (PERIOD_S / 6) * (k00 + 2 * (k10 + k20) + k30);
-    const float position_y = this->prev_position_y + (PERIOD_S / 6) * (k01 + 2 * (k11 + k21) + k31);
-    const float angle = this->prev_angle + (PERIOD_S / 6) * (k02 + 2 * (k12 + k22) + k32);
+    const float position_x = this->prev_position_x + (sample_period_s / 6) * (k00 + 2 * (k10 + k20) + k30);
+    const float position_y = this->prev_position_y + (sample_period_s / 6) * (k01 + 2 * (k11 + k21) + k31);
+    const float angle = this->prev_angle + (sample_period_s / 6) * (k02 + 2 * (k12 + k22) + k32);
 
     // Update variables
     this->prev_position_x = position_x;
@@ -403,9 +405,14 @@ private:
     }
 
     stamp = now();
-    publish_distance_data(stamp);
-    if (success)
+
+    if (success) {
+      publish_distance_data(stamp);
       publish_odometry_data(stamp);
+      i2c_main_err_cnt = 0;
+    } else {
+      i2c_main_err_cnt++;
+    }
   }
 
   OnSetParametersCallbackHandle::SharedPtr callback_handler;
@@ -433,6 +440,7 @@ private:
   int16_t prev_right_wheel_raw;
   int odom_left_overflow;
   int odom_right_overflow;
+  int i2c_main_err_cnt;
 
   float wheel_distance;
   float wheel_radius;
