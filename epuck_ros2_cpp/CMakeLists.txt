@@ -57,17 +57,29 @@ if(BUILD_TESTING)
   find_package(ament_cmake_pep257 REQUIRED)
   find_package(ament_cmake_xmllint REQUIRED)
   find_package(ament_cmake_clang_format REQUIRED)
+  set(PACKAGE_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/include;${CMAKE_CURRENT_SOURCE_DIR}/src/driver.cpp")
 
   ament_cppcheck()
   ament_cpplint(
     MAX_LINE_LENGTH 128
   )
-  ament_copyright()
-  ament_lint_cmake()
-  ament_flake8()
-  ament_pep257()
-  ament_xmllint()
+  ament_copyright(
+    ARGN ${PACKAGE_SOURCE_FILES}
+  )
+  ament_lint_cmake(
+    ARGN ${PACKAGE_SOURCE_FILES}
+  )
+  ament_flake8(
+    ARGN ${PACKAGE_SOURCE_FILES}
+  )
+  ament_pep257(
+    ARGN ${PACKAGE_SOURCE_FILES}
+  )
+  ament_xmllint(
+    ARGN ${PACKAGE_SOURCE_FILES}
+  )
   ament_clang_format(
+    ARGN ${PACKAGE_SOURCE_FILES}
     CONFIG_FILE "${CMAKE_CURRENT_SOURCE_DIR}/../.clang-format"
   )
 
@@ -77,6 +89,7 @@ if(BUILD_TESTING)
   # find_package(ament_cmake_uncrustify REQUIRED)
   # ament_uncrustify(
   #   TESTNAME "uncrustify_${PROJECT_NAME}"
+  #   ARGN ${PACKAGE_SOURCE_FILES}
   #   CONFIG_FILE "${CMAKE_CURRENT_SOURCE_DIR}/../uncrustify.cfg"
   #   MAX_LINE_LENGTH 128
   #   "${_output_path}"
