@@ -249,7 +249,7 @@ private:
       dist[i] = distance;
     }
     if (mTofInitialized) {
-      distTof = tofReadDistance() * 1000.0;
+      distTof = tofReadDistance() * 1000.0 + SENSOR_DIST_FROM_CENTER;;
     }
 
     // Create LaserScan message
