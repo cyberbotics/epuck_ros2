@@ -22,13 +22,11 @@ extern "C" {
 }
 
 #include <chrono>
-#include <iostream>
 #include <fstream>
+#include <iostream>
 #include <opencv2/opencv.hpp>
 
-void convert(
-  pipuck_image_t *input_image, pipuck_image_t *output_image,
-  std::string output_filename) {
+void convert(pipuck_image_t *input_image, pipuck_image_t *output_image, std::string output_filename) {
   std::ofstream file;
   file.open(output_filename, std::ios::out | std::ios::binary);
 

@@ -14,17 +14,17 @@
 
 #include <chrono>
 #include <memory>
+#include <opencv2/opencv.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/compressed_image.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <std_msgs/msg/string.hpp>
-#include <opencv2/opencv.hpp>
 
 extern "C" {
 #include "epuck_ros2_camera/pipuck_image.h"
-#include "epuck_ros2_camera/pipuck_v4l2.h"
 #include "epuck_ros2_camera/pipuck_jpeg.h"
 #include "epuck_ros2_camera/pipuck_ov7670.h"
+#include "epuck_ros2_camera/pipuck_v4l2.h"
 }
 
 using namespace std::chrono_literals;
@@ -45,15 +45,11 @@ public:
     pipuck_ov7670_init();
 
     callback_handler =
-      this->add_on_set_parameters_callback(std::bind(&CameraPublisher::param_change_callback, this,
-                                                     std::placeholders::_1));
+      this->add_on_set_parameters_callback(std::bind(&CameraPublisher::param_change_callback, this, std::placeholders::_1));
 
-    publisher_compressed = this->create_publisher<sensor_msgs::msg::CompressedImage>(
-      "image_raw/compressed", 0);
+    publisher_compressed = this->create_publisher<sensor_msgs::msg::CompressedImage>("image_raw/compressed", 0);
     publisher_raw = this->create_publisher<sensor_msgs::msg::Image>("image_raw", 0);
-    timer =
-      this->create_wall_timer(std::chrono::milliseconds(interval),
-                              std::bind(&CameraPublisher::timer_callback, this));
+    timer = this->create_wall_timer(std::chrono::milliseconds(interval), std::bind(&CameraPublisher::timer_callback, this));
   }
 
   ~CameraPublisher() {
@@ -65,8 +61,7 @@ public:
   }
 
 private:
-  rcl_interfaces::msg::SetParametersResult param_change_callback(
-    std::vector<rclcpp::Parameter> parameters) {
+  rcl_interfaces::msg::SetParametersResult param_change_callback(std::vector<rclcpp::Parameter> parameters) {
     auto result = rcl_interfaces::msg::SetParametersResult();
     result.successful = true;
 
@@ -85,8 +80,7 @@ private:
                                         std::bind(&CameraPublisher::timer_callback, this));
       }
 
-      RCLCPP_INFO(this->get_logger(), "Parameter '%s' has changed to %s",
-                  parameter.get_name().c_str(),
+      RCLCPP_INFO(this->get_logger(), "Parameter '%s' has changed to %s", parameter.get_name().c_str(),
                   parameter.value_to_string().c_str());
     }
 
@@ -94,8 +88,7 @@ private:
   }
 
   void timer_callback() {
-    if (publisher_compressed->get_subscription_count() > 0 ||
-        publisher_raw->get_subscription_count()) {
+    if (publisher_compressed->get_subscription_count() > 0 || publisher_raw->get_subscription_count()) {
       if (!v4l2_initialized) {
         pipuck_v4l2_init();
         v4l2_initialized = true;
@@ -120,8 +113,7 @@ private:
       message.is_bigendian = false;
       message.header.stamp = now();
       message.header.frame_id = "pipuck_image_raw";
-      message.data.assign(output_mat.data,
-                          output_mat.data + captured_image.height * captured_image.width * 3);
+      message.data.assign(output_mat.data, output_mat.data + captured_image.height * captured_image.width * 3);
     }
 
     if (publisher_compressed->get_subscription_count() > 0) {

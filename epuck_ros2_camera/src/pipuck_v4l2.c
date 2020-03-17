@@ -15,16 +15,16 @@
 #include "epuck_ros2_camera/pipuck_v4l2.h"
 
 #include <assert.h>
+#include <fcntl.h>
 #include <linux/ioctl.h>
 #include <linux/types.h>
 #include <linux/v4l2-common.h>
 #include <linux/v4l2-controls.h>
 #include <linux/videodev2.h>
-#include <fcntl.h>
-#include <unistd.h>
+#include <string.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
-#include <string.h>
+#include <unistd.h>
 
 static int f;
 static int status;
@@ -67,8 +67,7 @@ void pipuck_v4l2_init() {
   assert(status >= 0);
 
   // Get buffer pointer
-  buffer = mmap(NULL, querybuffer.length, PROT_READ | PROT_WRITE, MAP_SHARED, f,
-                querybuffer.m.offset);
+  buffer = mmap(NULL, querybuffer.length, PROT_READ | PROT_WRITE, MAP_SHARED, f, querybuffer.m.offset);
   memset(buffer, 0, querybuffer.length);
 
   // Capture
