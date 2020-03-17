@@ -78,20 +78,20 @@ public:
   I2CWrapperHW() {}
 
   explicit I2CWrapperHW(std::string device) {
-    mFh = open(device.c_str(), O_RDWR);
-    std::cout << mFh << std::endl;
-    if (mFh < 0)
+    mFile = open(device.c_str(), O_RDWR);
+    std::cout << mFile << std::endl;
+    if (mFile < 0)
       std::cout << "Cannot open file: " << device << std::endl;
   }
 
-  int setAddress(int address) { return ioctl(mFh, I2C_SLAVE, address); }
+  int setAddress(int address) { return ioctl(mFile, I2C_SLAVE, address); }
 
-  int readData(char *buffer, int size) { return read(mFh, buffer, size); }
+  int readData(char *buffer, int size) { return read(mFile, buffer, size); }
 
-  int writeData(char *buffer, int size) { return write(mFh, buffer, size); }
+  int writeData(char *buffer, int size) { return write(mFile, buffer, size); }
 
 private:
-  int mFh;
+  int mFile;
 };
 
 #endif  // EPUCK_ROS2_CPP__I2C_WRAPPER_HPP_

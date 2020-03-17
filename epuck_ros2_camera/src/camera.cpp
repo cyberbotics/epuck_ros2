@@ -36,10 +36,10 @@ public:
     auto interval = declare_parameter<int>("interval", 80);
 
     pipuck_image_init(&mCapturedImage);
-    pipuck_image_init(&compressedImage);
+    pipuck_image_init(&mCompressedImage);
 
-    compressedImage.quality = quality;
-    compressedImage.data = imageBuffer;
+    mCompressedImage.quality = quality;
+    mCompressedImage.data = mImageBuffer;
     mCapturedImage.encoding = PIPUCK_IMAGE_ENCODING_YUYV;
 
     pipuck_ov7670_init();
@@ -70,9 +70,9 @@ private:
         if (mJpegInitialized)
           pipuck_jpeg_deinit();
 
-        compressedImage.quality = parameter.as_int();
+        mCompressedImage.quality = parameter.as_int();
         if (mJpegInitialized)
-          pipuck_jpeg_init(&mCapturedImage, &compressedImage);
+          pipuck_jpeg_init(&mCapturedImage, &mCompressedImage);
 
       } else if (parameter.get_name() == "interval") {
         mTimer->cancel();
@@ -118,16 +118,16 @@ private:
 
     if (mPublisherCompressed->get_subscription_count() > 0) {
       if (!mJpegInitialized) {
-        pipuck_jpeg_init(&mCapturedImage, &compressedImage);
+        pipuck_jpeg_init(&mCapturedImage, &mCompressedImage);
         mJpegInitialized = true;
       }
-      pipuck_jpeg_encode(&mCapturedImage, &compressedImage);
+      pipuck_jpeg_encode(&mCapturedImage, &mCompressedImage);
 
       auto message = sensor_msgs::msg::CompressedImage();
       message.format = "jpeg";
       message.header.stamp = now();
       message.header.frame_id = "pipuck_image_compressed";
-      message.data.assign(compressedImage.data, compressedImage.data + compressedImage.size);
+      message.data.assign(mCompressedImage.data, mCompressedImage.data + mCompressedImage.size);
 
       mPublisherCompressed->publish(message);
     } else if (mJpegInitialized) {
@@ -139,9 +139,9 @@ private:
   rclcpp::Publisher<sensor_msgs::msg::CompressedImage>::SharedPtr mPublisherCompressed;
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr mPublisherRaw;
   pipuck_image_t mCapturedImage;
-  pipuck_image_t compressedImage;
+  pipuck_image_t mCompressedImage;
   OnSetParametersCallbackHandle::SharedPtr mCallbackHandler;
-  char imageBuffer[900 * 1024];
+  char mImageBuffer[900 * 1024];
   bool mV4l2Initialized;
   bool mJpegInitialized;
 };

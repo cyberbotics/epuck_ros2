@@ -162,7 +162,7 @@ public:
     RCLCPP_INFO(get_logger(), "Driver mode: %s", type.c_str());
   }
 
-  ~EPuckPublisher() { close(mFh); }
+  ~EPuckPublisher() { close(mFile); }
 
 private:
   void resetOdometry() {
@@ -210,12 +210,12 @@ private:
   }
 
   static geometry_msgs::msg::Quaternion euler2quaternion(double roll, double pitch, double yaw) {
-    geometry_msgs::msg::Quaternion q;
-    q.x = sin(roll / 2) * cos(pitch / 2) * cos(yaw / 2) - cos(roll / 2) * sin(pitch / 2) * sin(yaw / 2);
-    q.y = cos(roll / 2) * sin(pitch / 2) * cos(yaw / 2) + sin(roll / 2) * cos(pitch / 2) * sin(yaw / 2);
-    q.z = cos(roll / 2) * cos(pitch / 2) * sin(yaw / 2) - sin(roll / 2) * sin(pitch / 2) * cos(yaw / 2);
-    q.w = cos(roll / 2) * cos(pitch / 2) * cos(yaw / 2) + sin(roll / 2) * sin(pitch / 2) * sin(yaw / 2);
-    return q;
+    geometry_msgs::msg::Quaternion quaternion;
+    quaternion.x = sin(roll / 2) * cos(pitch / 2) * cos(yaw / 2) - cos(roll / 2) * sin(pitch / 2) * sin(yaw / 2);
+    quaternion.y = cos(roll / 2) * sin(pitch / 2) * cos(yaw / 2) + sin(roll / 2) * cos(pitch / 2) * sin(yaw / 2);
+    quaternion.z = cos(roll / 2) * cos(pitch / 2) * sin(yaw / 2) - sin(roll / 2) * sin(pitch / 2) * cos(yaw / 2);
+    quaternion.w = cos(roll / 2) * cos(pitch / 2) * cos(yaw / 2) + sin(roll / 2) * sin(pitch / 2) * sin(yaw / 2);
+    return quaternion;
   }
 
   void onCmdVelReceived(const geometry_msgs::msg::Twist::SharedPtr msg) {
@@ -428,7 +428,7 @@ private:
 
   std::unique_ptr<I2CWrapper> mI2cMain;
 
-  int mFh;
+  int mFile;
   char mMsgActuators[MSG_ACTUATORS_SIZE];
   char mMsgSensors[MSG_SENSORS_SIZE];
 
