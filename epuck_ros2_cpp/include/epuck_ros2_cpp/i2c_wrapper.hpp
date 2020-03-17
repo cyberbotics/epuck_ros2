@@ -15,19 +15,17 @@
 #ifndef EPUCK_ROS2_CPP__I2C_WRAPPER_HPP_
 #define EPUCK_ROS2_CPP__I2C_WRAPPER_HPP_
 
-extern "C"
-{
+extern "C" {
 #include <fcntl.h>
 #include <linux/i2c-dev.h>
 #include <sys/ioctl.h>
-#include <unistd.h>
 #include <sys/stat.h>
+#include <unistd.h>
 }
 
-#include <string>
-#include <iostream>
 #include <fstream>
-
+#include <iostream>
+#include <string>
 
 class I2CWrapper {
 public:
@@ -38,7 +36,7 @@ public:
 
 class I2CWrapperTest : public I2CWrapper {
 public:
-  I2CWrapperTest() { }
+  I2CWrapperTest() {}
   explicit I2CWrapperTest(std::string device) {
     base_filename = "/tmp" + device;
 
@@ -77,7 +75,7 @@ private:
 
 class I2CWrapperHW : public I2CWrapper {
 public:
-  I2CWrapperHW() { }
+  I2CWrapperHW() {}
 
   explicit I2CWrapperHW(std::string device) {
     fh = open(device.c_str(), O_RDWR);
@@ -86,17 +84,11 @@ public:
       std::cout << "Cannot open file: " << device << std::endl;
   }
 
-  int set_address(int address) {
-    return ioctl(fh, I2C_SLAVE, address);
-  }
+  int set_address(int address) { return ioctl(fh, I2C_SLAVE, address); }
 
-  int read_data(char *buffer, int size) {
-    return read(fh, buffer, size);
-  }
+  int read_data(char *buffer, int size) { return read(fh, buffer, size); }
 
-  int write_data(char *buffer, int size) {
-    return write(fh, buffer, size);
-  }
+  int write_data(char *buffer, int size) { return write(fh, buffer, size); }
 
 private:
   int fh;
