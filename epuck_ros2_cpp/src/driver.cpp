@@ -66,7 +66,7 @@ const float DEFAULT_WHEEL_DISTANCE = 0.05685;
 const float DEFAULT_WHEEL_RADIUS = 0.02;
 const float SENSOR_DIST_FROM_CENTER = 0.035;
 const std::vector<std::vector<float>> INFRARED_TABLE = {{0, 4095},      {0.005, 2133.33}, {0.01, 1465.73}, {0.015, 601.46},
-                                                        {0.02, 383.84}, {0.03, 234.93},   {0.04, 158.03}};
+                                                        {0.02, 383.84}, {0.03, 234.93},   {0.04, 158.03},  {0.05, 120}};
 const std::vector<double> DISTANCE_SENSOR_ANGLE = {
   -15 * M_PI / 180,   // ps0
   -45 * M_PI / 180,   // ps1
@@ -205,7 +205,7 @@ private:
 
   static float intensity2distance(int pX) {
     for (unsigned int i = 0; i < INFRARED_TABLE.size() - 1; i++) {
-      if (INFRARED_TABLE[i][1] >= pX && INFRARED_TABLE[i + 1][1] < pX) {
+      if (INFRARED_TABLE[i][1] > pX && INFRARED_TABLE[i + 1][1] <= pX) {
         const float bX = INFRARED_TABLE[i][1];
         const float bY = INFRARED_TABLE[i][0];
         const float aX = INFRARED_TABLE[i + 1][1];
