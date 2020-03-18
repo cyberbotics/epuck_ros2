@@ -20,7 +20,7 @@ typedef struct _pipuck_imu_t {
   float accelerometer[3];
 } pipuck_imu_t;
 
-void pipuck_imu_calibrate();
+void pipuck_imu_calibrate(int file);
 void pipuck_imu_read(int file, pipuck_imu_t *data);
 
 #endif

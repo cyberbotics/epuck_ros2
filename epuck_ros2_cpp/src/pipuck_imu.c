@@ -38,9 +38,11 @@ typedef struct _pipuck_imu_raw_t {
 } pipuck_imu_raw_t;
 
 static char buffer[6];
-static pipuck_imu_raw_t pipuck_imu_raw;
+static pipuck_imu_raw_t imu_read;
+static pipuck_imu_raw_t imu_offset;
 
 static void select_device(int file);
+static int read_register(int file, uint16_t reg, char *data, int size);
 
 void select_device(int file) {
   int success;
@@ -66,25 +68,39 @@ int read_register(int file, uint16_t reg, char *data, int size) {
   return 0;
 }
 
-void pipuck_imu_read(int file, pipuck_imu_t *data) {
-  // Read accelerometer and gyroscope data
+void read_raw(int file, pipuck_imu_raw_t *raw) {
   select_device(file);
   for (int i = 0; i < 3; i++) {
     read_register(file, ACCEL_XOUT_H, buffer, 6);
   }
   for (int i = 0; i < 3; i++) {
-    pipuck_imu_raw.accelerometer[i] = (buffer[i * 2 + 1] & 0x00FF) | ((buffer[i * 2] << 8) & 0xFF00);
+    raw->accelerometer[i] = (buffer[i * 2 + 1] & 0x00FF) | ((buffer[i * 2] << 8) & 0xFF00);
   }
   for (int i = 0; i < 3; i++) {
     read_register(file, GYRO_XOUT_H, buffer, 6);
   }
   for (int i = 0; i < 3; i++) {
-    pipuck_imu_raw.gyroscope[i] = (buffer[i * 2 + 1] & 0x00FF) | ((buffer[i * 2] << 8) & 0xFF00);
+    raw->gyroscope[i] = (buffer[i * 2 + 1] & 0x00FF) | ((buffer[i * 2] << 8) & 0xFF00);
+  }
+}
+
+void pipuck_imu_calibrate(int file) {
+  read_raw(file, &imu_offset);
+}
+
+void pipuck_imu_read(int file, pipuck_imu_t *data) {
+  // Read accelerometer and gyroscope data
+  read_raw(file, &imu_read);
+
+  // Apply calibration
+  for (int i = 0; i < 3; i++) {
+    imu_read.accelerometer[i] -= imu_offset.accelerometer[i];
+    imu_read.gyroscope[i] -= imu_offset.gyroscope[i];
   }
 
   // Scale data
   for (int i = 0; i < 3; i++) {
-    data->accelerometer[i] = ((float)pipuck_imu_raw.accelerometer[i] / RAW2G) / G2MS2;
-    data->gyroscope[i] = ((float)pipuck_imu_raw.gyroscope[i] / RAW2DEG) * (M_PI / 180);
+    data->accelerometer[i] = ((float)imu_read.accelerometer[i] / RAW2G) / G2MS2;
+    data->gyroscope[i] = ((float)imu_read.gyroscope[i] / RAW2DEG) * (M_PI / 180);
   }
 }
