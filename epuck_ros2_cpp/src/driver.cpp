@@ -250,9 +250,8 @@ private:
       float distance = EPuckPublisher::intensity2distance(distanceIntensity);
       dist[i] = distance;
     }
-    if (mTofInitialized) {
+    if (mTofInitialized)
       distTof = tofReadDistance() / 1000.0;
-    }
 
     // Create LaserScan message
     auto msg = sensor_msgs::msg::LaserScan();
