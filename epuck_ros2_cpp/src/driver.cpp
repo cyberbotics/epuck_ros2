@@ -148,8 +148,8 @@ public:
       infraredTransform.header.frame_id = "base_link";
       infraredTransform.child_frame_id = "ps" + std::to_string(i);
       infraredTransform.transform.rotation = EPuckPublisher::euler2quaternion(0, 0, DISTANCE_SENSOR_ANGLE[i]);
-      infraredTransform.transform.translation.x = SENSOR_DIST_FROM_CENTER;
-      infraredTransform.transform.translation.y = 0;
+      infraredTransform.transform.translation.x = SENSOR_DIST_FROM_CENTER * cos(DISTANCE_SENSOR_ANGLE[i]);
+      infraredTransform.transform.translation.y = SENSOR_DIST_FROM_CENTER * sin(DISTANCE_SENSOR_ANGLE[i]);
       infraredTransform.transform.translation.z = 0;
       mInfraredBroadcasters[i]->sendTransform(infraredTransform);
     }
@@ -307,7 +307,7 @@ private:
       msgRange.header.frame_id = "tof";
       msgRange.radiation_type = sensor_msgs::msg::Range::INFRARED;
       msgRange.min_range = 0.005;
-      msgRange.min_range = 2.0;
+      msgRange.max_range = 2.0;
       msgRange.range = distTof;
       // Reference: https://forum.pololu.com/t/vl53l0x-beam-width-angle/11483/2
       msgRange.field_of_view = 25 * M_PI / 180;
