@@ -23,7 +23,6 @@ extern "C" {
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "vl53l0x/tof.h"
 }
 
 #include <algorithm>
@@ -33,6 +32,10 @@ extern "C" {
 #include <memory>
 #include <string>
 #include <vector>
+
+extern "C" {
+#include "vl53l0x/tof.h"
+}
 
 #include "epuck_ros2_cpp/i2c_wrapper.hpp"
 #include "geometry_msgs/msg/quaternion.hpp"
@@ -99,7 +102,7 @@ public:
       mI2cMain = std::make_unique<I2CWrapperTest>("/dev/i2c-4");
     else
       mI2cMain = std::make_unique<I2CWrapperHW>("/dev/i2c-4");
-    mTofInitialized = tofInit(0, 0x29, 4);
+    mTofInitialized = tofInit(4, 0x29, 1);
     if (!mTofInitialized) {
       RCLCPP_WARN(get_logger(), "ToF device is not accessible!");
     }
@@ -249,7 +252,7 @@ private:
       dist[i] = distance;
     }
     if (mTofInitialized) {
-      distTof = tofReadDistance() * 1000.0 + SENSOR_DIST_FROM_CENTER;
+      distTof = tofReadDistance() / 1000.0 + SENSOR_DIST_FROM_CENTER;
       ;
     }
 
