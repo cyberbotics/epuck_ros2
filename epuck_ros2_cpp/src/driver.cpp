@@ -102,9 +102,8 @@ public:
     else
       mI2cMain = std::make_unique<I2CWrapperHW>("/dev/i2c-4");
     mTofInitialized = tofInit(4, 0x29, 1);
-    if (!mTofInitialized) {
+    if (!mTofInitialized)
       RCLCPP_WARN(get_logger(), "ToF device is not accessible!");
-    }
 
     // Initialize the values
     std::fill(mMsgActuators, mMsgActuators + MSG_ACTUATORS_SIZE, 0);
