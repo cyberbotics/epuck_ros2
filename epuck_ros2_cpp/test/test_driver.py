@@ -238,7 +238,7 @@ class TestController(unittest.TestCase):
             self.node,
             Range,
             'ps0',
-            lambda msg: abs(msg.range - 0.05 - DISTANCE_FROM_CENTER) < 1E-3)
+            lambda msg: abs(msg.range - 0.05) < 1E-3)
         self.assertTrue(
             condition, 'The node hasn\'t published any distance measurement')
 
@@ -247,7 +247,7 @@ class TestController(unittest.TestCase):
             self.node,
             Range,
             'ps1',
-            lambda msg: abs(msg.range - 0.02 - DISTANCE_FROM_CENTER) < 1E-3
+            lambda msg: abs(msg.range - 0.02) < 1E-3
         )
         self.assertTrue(
             condition, 'The node hasn\'t published any distance measurement')

@@ -33,6 +33,10 @@ extern "C" {
 #include <string>
 #include <vector>
 
+extern "C" {
+#include "vl53l0x/tof.h"
+}
+
 #include "epuck_ros2_cpp/i2c_wrapper.hpp"
 #include "geometry_msgs/msg/quaternion.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"
@@ -61,9 +65,8 @@ extern "C" {
 const float DEFAULT_WHEEL_DISTANCE = 0.05685;
 const float DEFAULT_WHEEL_RADIUS = 0.02;
 const float SENSOR_DIST_FROM_CENTER = 0.035;
-const std::vector<std::vector<float>> INFRARED_TABLE = {{0, 4095},       {0.005, 2133.33}, {0.01, 1465.73},
-                                                        {0.015, 601.46}, {0.02, 383.84},   {0.03, 234.93},
-                                                        {0.04, 158.03},  {0.05, 120},      {0.06, 104.09}};
+const std::vector<std::vector<float>> INFRARED_TABLE = {{0, 4095},      {0.005, 2133.33}, {0.01, 1465.73}, {0.015, 601.46},
+                                                        {0.02, 383.84}, {0.03, 234.93},   {0.04, 158.03},  {0.05, 120}};
 const std::vector<double> DISTANCE_SENSOR_ANGLE = {
   -15 * M_PI / 180,   // ps0
   -45 * M_PI / 180,   // ps1
@@ -98,6 +101,9 @@ public:
       mI2cMain = std::make_unique<I2CWrapperTest>("/dev/i2c-4");
     else
       mI2cMain = std::make_unique<I2CWrapperHW>("/dev/i2c-4");
+    mTofInitStatus = tofInit(4, 0x29, 1);
+    if (!mTofInitStatus)
+      RCLCPP_WARN(get_logger(), "ToF device is not accessible!");
 
     // Initialize the values
     std::fill(mMsgActuators, mMsgActuators + MSG_ACTUATORS_SIZE, 0);
@@ -112,6 +118,7 @@ public:
     mOdometryPublisher = create_publisher<nav_msgs::msg::Odometry>("odom", 1);
     for (int i = 0; i < 8; i++)
       mRangePublisher[i] = create_publisher<sensor_msgs::msg::Range>("ps" + std::to_string(i), 1);
+    mRangeTofPublisher = create_publisher<sensor_msgs::msg::Range>("tof", 1);
     mTimer = create_wall_timer(std::chrono::milliseconds(PERIOD_MS), std::bind(&EPuckPublisher::updateCallback, this));
 
     // Dynamic tf broadcaster: Odometry
@@ -140,8 +147,8 @@ public:
       infraredTransform.header.frame_id = "base_link";
       infraredTransform.child_frame_id = "ps" + std::to_string(i);
       infraredTransform.transform.rotation = EPuckPublisher::euler2quaternion(0, 0, DISTANCE_SENSOR_ANGLE[i]);
-      infraredTransform.transform.translation.x = 0;
-      infraredTransform.transform.translation.y = 0;
+      infraredTransform.transform.translation.x = SENSOR_DIST_FROM_CENTER * cos(DISTANCE_SENSOR_ANGLE[i]);
+      infraredTransform.transform.translation.y = SENSOR_DIST_FROM_CENTER * sin(DISTANCE_SENSOR_ANGLE[i]);
       infraredTransform.transform.translation.z = 0;
       mInfraredBroadcasters[i]->sendTransform(infraredTransform);
     }
@@ -153,7 +160,7 @@ public:
     infraredTransform.header.frame_id = "base_link";
     infraredTransform.child_frame_id = "tof";
     infraredTransform.transform.rotation = EPuckPublisher::euler2quaternion(0, 0, 0);
-    infraredTransform.transform.translation.x = 0;
+    infraredTransform.transform.translation.x = SENSOR_DIST_FROM_CENTER;
     infraredTransform.transform.translation.y = 0;
     infraredTransform.transform.translation.z = 0;
     mInfraredBroadcasters[8]->sendTransform(infraredTransform);
@@ -197,7 +204,7 @@ private:
 
   static float intensity2distance(int pX) {
     for (unsigned int i = 0; i < INFRARED_TABLE.size() - 1; i++) {
-      if (INFRARED_TABLE[i][1] >= pX && INFRARED_TABLE[i + 1][1] < pX) {
+      if (INFRARED_TABLE[i][1] > pX && INFRARED_TABLE[i + 1][1] <= pX) {
         const float bX = INFRARED_TABLE[i][1];
         const float bY = INFRARED_TABLE[i][0];
         const float aX = INFRARED_TABLE[i + 1][1];
@@ -236,11 +243,14 @@ private:
   void publishDistanceData(rclcpp::Time &stamp) {
     // Decode measurements
     float dist[8];
+    float distTof = OUT_OF_RANGE;
     for (int i = 0; i < 8; i++) {
       const int distanceIntensity = mMsgSensors[i * 2] + (mMsgSensors[i * 2 + 1] << 8);
-      float distance = EPuckPublisher::intensity2distance(distanceIntensity) + SENSOR_DIST_FROM_CENTER;
+      float distance = EPuckPublisher::intensity2distance(distanceIntensity);
       dist[i] = distance;
     }
+    if (mTofInitStatus)
+      distTof = tofReadDistance() / 1000.0;
 
     // Create LaserScan message
     auto msg = sensor_msgs::msg::LaserScan();
@@ -253,27 +263,27 @@ private:
     msg.range_min = 0.005 + SENSOR_DIST_FROM_CENTER;
     msg.range_max = 0.05 + SENSOR_DIST_FROM_CENTER;
     msg.ranges = std::vector<float>{
-      dist[3],       // -150
-      OUT_OF_RANGE,  // -135
-      OUT_OF_RANGE,  // -120
-      OUT_OF_RANGE,  // -105
-      dist[2],       // -90
-      OUT_OF_RANGE,  // -75
-      OUT_OF_RANGE,  // -60
-      dist[1],       // -45
-      OUT_OF_RANGE,  // -30
-      dist[0],       // -15
-      OUT_OF_RANGE,  // 0
-      dist[7],       // 15
-      OUT_OF_RANGE,  // 30
-      dist[6],       // 45
-      OUT_OF_RANGE,  // 60
-      OUT_OF_RANGE,  // 75
-      dist[5],       // 90
-      OUT_OF_RANGE,  // 105
-      OUT_OF_RANGE,  // 120
-      OUT_OF_RANGE,  // 135
-      dist[4],       // 150
+      dist[3] + SENSOR_DIST_FROM_CENTER,  // -150
+      OUT_OF_RANGE,                       // -135
+      OUT_OF_RANGE,                       // -120
+      OUT_OF_RANGE,                       // -105
+      dist[2] + SENSOR_DIST_FROM_CENTER,  // -90
+      OUT_OF_RANGE,                       // -75
+      OUT_OF_RANGE,                       // -60
+      dist[1] + SENSOR_DIST_FROM_CENTER,  // -45
+      OUT_OF_RANGE,                       // -30
+      dist[0] + SENSOR_DIST_FROM_CENTER,  // -15
+      distTof + SENSOR_DIST_FROM_CENTER,  // 0
+      dist[7] + SENSOR_DIST_FROM_CENTER,  // 15
+      OUT_OF_RANGE,                       // 30
+      dist[6] + SENSOR_DIST_FROM_CENTER,  // 45
+      OUT_OF_RANGE,                       // 60
+      OUT_OF_RANGE,                       // 75
+      dist[5] + SENSOR_DIST_FROM_CENTER,  // 90
+      OUT_OF_RANGE,                       // 105
+      OUT_OF_RANGE,                       // 120
+      OUT_OF_RANGE,                       // 135
+      dist[4] + SENSOR_DIST_FROM_CENTER,  // 150
     };
     mLaserPublisher->publish(msg);
 
@@ -283,10 +293,23 @@ private:
       msgRange.header.stamp = stamp;
       msgRange.header.frame_id = "ps" + std::to_string(i);
       msgRange.radiation_type = sensor_msgs::msg::Range::INFRARED;
-      msgRange.min_range = 0.05 + SENSOR_DIST_FROM_CENTER;
-      msgRange.min_range = 0.005 + SENSOR_DIST_FROM_CENTER;
+      msgRange.min_range = 0.005;
+      msgRange.max_range = 0.05;
       msgRange.range = dist[i];
+      msgRange.field_of_view = 15 * M_PI / 180;
       mRangePublisher[i]->publish(msgRange);
+    }
+    if (mTofInitStatus) {
+      auto msgRange = sensor_msgs::msg::Range();
+      msgRange.header.stamp = stamp;
+      msgRange.header.frame_id = "tof";
+      msgRange.radiation_type = sensor_msgs::msg::Range::INFRARED;
+      msgRange.min_range = 0.005;
+      msgRange.max_range = 2.0;
+      msgRange.range = distTof;
+      // Reference: https://forum.pololu.com/t/vl53l0x-beam-width-angle/11483/2
+      msgRange.field_of_view = 25 * M_PI / 180;
+      mRangeTofPublisher->publish(msgRange);
     }
   }
 
@@ -419,7 +442,8 @@ private:
   rclcpp::TimerBase::SharedPtr mTimer;
   rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr mLaserPublisher;
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr mOdometryPublisher;
-  rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr mRangePublisher[9];
+  rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr mRangePublisher[8];
+  rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr mRangeTofPublisher;
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr mSubscription;
 
   std::unique_ptr<tf2_ros::StaticTransformBroadcaster> mLaserBroadcaster;
@@ -443,6 +467,8 @@ private:
 
   float mWheelDistance;
   float mWheelRadius;
+
+  int mTofInitStatus;
 };
 
 int main(int argc, char *argv[]) {

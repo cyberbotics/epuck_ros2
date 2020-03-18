@@ -1,12 +1,10 @@
 cmake_minimum_required(VERSION 3.5)
 project(epuck_ros2_cpp)
 
-# Default to C99
 if(NOT CMAKE_C_STANDARD)
   set(CMAKE_C_STANDARD 99)
 endif()
 
-# Default to C++14
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 14)
 endif()
@@ -23,11 +21,15 @@ find_package(sensor_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(nav_msgs REQUIRED)
 
-
-add_executable(driver src/driver.cpp)
+add_executable(driver
+  src/driver.cpp
+  src/vl53l0x/tof.c
+)
 target_include_directories(driver PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>)
+  $<INSTALL_INTERFACE:include>
+  src/vl53l0x
+)
 
 ament_target_dependencies(driver
   rclcpp
@@ -52,17 +54,27 @@ if(BUILD_TESTING)
   find_package(ament_cmake_pep257 REQUIRED)
   find_package(ament_cmake_xmllint REQUIRED)
   find_package(ament_cmake_clang_format REQUIRED)
+  set(PACKAGE_CPP_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
+  )
 
-  ament_cppcheck()
+  ament_cppcheck(
+    ARGN ${PACKAGE_CPP_FILES}
+  )
   ament_cpplint(
+    ARGN ${PACKAGE_CPP_FILES}
     MAX_LINE_LENGTH 128
   )
-  ament_copyright()
+  ament_copyright(
+    ARGN ${PACKAGE_CPP_FILES}
+  )
   ament_lint_cmake()
   ament_flake8()
   ament_pep257()
   ament_xmllint()
   ament_clang_format(
+    ARGN ${PACKAGE_CPP_FILES}
     CONFIG_FILE "${CMAKE_CURRENT_SOURCE_DIR}/../.clang-format"
   )
 
@@ -72,6 +84,7 @@ if(BUILD_TESTING)
   # find_package(ament_cmake_uncrustify REQUIRED)
   # ament_uncrustify(
   #   TESTNAME "uncrustify_${PROJECT_NAME}"
+  #   ARGN ${PACKAGE_SOURCE_FILES}
   #   CONFIG_FILE "${CMAKE_CURRENT_SOURCE_DIR}/../uncrustify.cfg"
   #   MAX_LINE_LENGTH 128
   #   "${_output_path}"
