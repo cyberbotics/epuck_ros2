@@ -469,6 +469,7 @@ private:
   float mWheelRadius;
 
   int mTofInitStatus;
+  int mImuAddress;
 };
 
 int main(int argc, char *argv[]) {
