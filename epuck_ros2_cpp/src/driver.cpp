@@ -101,8 +101,8 @@ public:
       mI2cMain = std::make_unique<I2CWrapperTest>("/dev/i2c-4");
     else
       mI2cMain = std::make_unique<I2CWrapperHW>("/dev/i2c-4");
-    mTofInitialized = tofInit(4, 0x29, 1);
-    if (!mTofInitialized)
+    mTofInitStatus = tofInit(4, 0x29, 1);
+    if (!mTofInitStatus)
       RCLCPP_WARN(get_logger(), "ToF device is not accessible!");
 
     // Initialize the values
@@ -249,7 +249,7 @@ private:
       float distance = EPuckPublisher::intensity2distance(distanceIntensity);
       dist[i] = distance;
     }
-    if (mTofInitialized)
+    if (mTofInitStatus)
       distTof = tofReadDistance() / 1000.0;
 
     // Create LaserScan message
@@ -299,7 +299,7 @@ private:
       msgRange.field_of_view = 15 * M_PI / 180;
       mRangePublisher[i]->publish(msgRange);
     }
-    if (mTofInitialized) {
+    if (mTofInitStatus) {
       auto msgRange = sensor_msgs::msg::Range();
       msgRange.header.stamp = stamp;
       msgRange.header.frame_id = "tof";
@@ -468,7 +468,7 @@ private:
   float mWheelDistance;
   float mWheelRadius;
 
-  int mTofInitialized;
+  int mTofInitStatus;
 };
 
 int main(int argc, char *argv[]) {
