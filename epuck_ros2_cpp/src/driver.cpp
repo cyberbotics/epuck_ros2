@@ -65,9 +65,8 @@ extern "C" {
 const float DEFAULT_WHEEL_DISTANCE = 0.05685;
 const float DEFAULT_WHEEL_RADIUS = 0.02;
 const float SENSOR_DIST_FROM_CENTER = 0.035;
-const std::vector<std::vector<float>> INFRARED_TABLE = {{0, 4095},       {0.005, 2133.33}, {0.01, 1465.73},
-                                                        {0.015, 601.46}, {0.02, 383.84},   {0.03, 234.93},
-                                                        {0.04, 158.03},  {0.05, 120},      {0.06, 104.09}};
+const std::vector<std::vector<float>> INFRARED_TABLE = {{0, 4095},      {0.005, 2133.33}, {0.01, 1465.73}, {0.015, 601.46},
+                                                        {0.02, 383.84}, {0.03, 234.93},   {0.04, 158.03}};
 const std::vector<double> DISTANCE_SENSOR_ANGLE = {
   -15 * M_PI / 180,   // ps0
   -45 * M_PI / 180,   // ps1
@@ -149,7 +148,7 @@ public:
       infraredTransform.header.frame_id = "base_link";
       infraredTransform.child_frame_id = "ps" + std::to_string(i);
       infraredTransform.transform.rotation = EPuckPublisher::euler2quaternion(0, 0, DISTANCE_SENSOR_ANGLE[i]);
-      infraredTransform.transform.translation.x = 0;
+      infraredTransform.transform.translation.x = SENSOR_DIST_FROM_CENTER;
       infraredTransform.transform.translation.y = 0;
       infraredTransform.transform.translation.z = 0;
       mInfraredBroadcasters[i]->sendTransform(infraredTransform);
@@ -162,7 +161,7 @@ public:
     infraredTransform.header.frame_id = "base_link";
     infraredTransform.child_frame_id = "tof";
     infraredTransform.transform.rotation = EPuckPublisher::euler2quaternion(0, 0, 0);
-    infraredTransform.transform.translation.x = 0;
+    infraredTransform.transform.translation.x = SENSOR_DIST_FROM_CENTER;
     infraredTransform.transform.translation.y = 0;
     infraredTransform.transform.translation.z = 0;
     mInfraredBroadcasters[8]->sendTransform(infraredTransform);
@@ -248,12 +247,11 @@ private:
     float distTof = OUT_OF_RANGE;
     for (int i = 0; i < 8; i++) {
       const int distanceIntensity = mMsgSensors[i * 2] + (mMsgSensors[i * 2 + 1] << 8);
-      float distance = EPuckPublisher::intensity2distance(distanceIntensity) + SENSOR_DIST_FROM_CENTER;
+      float distance = EPuckPublisher::intensity2distance(distanceIntensity);
       dist[i] = distance;
     }
     if (mTofInitialized) {
-      distTof = tofReadDistance() / 1000.0 + SENSOR_DIST_FROM_CENTER;
-      ;
+      distTof = tofReadDistance() / 1000.0;
     }
 
     // Create LaserScan message
@@ -267,27 +265,27 @@ private:
     msg.range_min = 0.005 + SENSOR_DIST_FROM_CENTER;
     msg.range_max = 0.05 + SENSOR_DIST_FROM_CENTER;
     msg.ranges = std::vector<float>{
-      dist[3],       // -150
-      OUT_OF_RANGE,  // -135
-      OUT_OF_RANGE,  // -120
-      OUT_OF_RANGE,  // -105
-      dist[2],       // -90
-      OUT_OF_RANGE,  // -75
-      OUT_OF_RANGE,  // -60
-      dist[1],       // -45
-      OUT_OF_RANGE,  // -30
-      dist[0],       // -15
-      distTof,       // 0
-      dist[7],       // 15
-      OUT_OF_RANGE,  // 30
-      dist[6],       // 45
-      OUT_OF_RANGE,  // 60
-      OUT_OF_RANGE,  // 75
-      dist[5],       // 90
-      OUT_OF_RANGE,  // 105
-      OUT_OF_RANGE,  // 120
-      OUT_OF_RANGE,  // 135
-      dist[4],       // 150
+      dist[3] + SENSOR_DIST_FROM_CENTER,  // -150
+      OUT_OF_RANGE,                       // -135
+      OUT_OF_RANGE,                       // -120
+      OUT_OF_RANGE,                       // -105
+      dist[2] + SENSOR_DIST_FROM_CENTER,  // -90
+      OUT_OF_RANGE,                       // -75
+      OUT_OF_RANGE,                       // -60
+      dist[1] + SENSOR_DIST_FROM_CENTER,  // -45
+      OUT_OF_RANGE,                       // -30
+      dist[0] + SENSOR_DIST_FROM_CENTER,  // -15
+      distTof + SENSOR_DIST_FROM_CENTER,  // 0
+      dist[7] + SENSOR_DIST_FROM_CENTER,  // 15
+      OUT_OF_RANGE,                       // 30
+      dist[6] + SENSOR_DIST_FROM_CENTER,  // 45
+      OUT_OF_RANGE,                       // 60
+      OUT_OF_RANGE,                       // 75
+      dist[5] + SENSOR_DIST_FROM_CENTER,  // 90
+      OUT_OF_RANGE,                       // 105
+      OUT_OF_RANGE,                       // 120
+      OUT_OF_RANGE,                       // 135
+      dist[4] + SENSOR_DIST_FROM_CENTER,  // 150
     };
     mLaserPublisher->publish(msg);
 
@@ -297,9 +295,10 @@ private:
       msgRange.header.stamp = stamp;
       msgRange.header.frame_id = "ps" + std::to_string(i);
       msgRange.radiation_type = sensor_msgs::msg::Range::INFRARED;
-      msgRange.min_range = 0.05 + SENSOR_DIST_FROM_CENTER;
-      msgRange.min_range = 0.005 + SENSOR_DIST_FROM_CENTER;
+      msgRange.min_range = 0.005;
+      msgRange.max_range = 0.05;
       msgRange.range = dist[i];
+      msgRange.field_of_view = 15 * M_PI / 180;
       mRangePublisher[i]->publish(msgRange);
     }
     if (mTofInitialized) {
@@ -307,9 +306,11 @@ private:
       msgRange.header.stamp = stamp;
       msgRange.header.frame_id = "tof";
       msgRange.radiation_type = sensor_msgs::msg::Range::INFRARED;
-      msgRange.min_range = 0.05 + SENSOR_DIST_FROM_CENTER;
-      msgRange.min_range = 0.005 + SENSOR_DIST_FROM_CENTER;
+      msgRange.min_range = 0.005;
+      msgRange.min_range = 2.0;
       msgRange.range = distTof;
+      // Reference: https://forum.pololu.com/t/vl53l0x-beam-width-angle/11483/2
+      msgRange.field_of_view = 25 * M_PI / 180;
       mRangeTofPublisher->publish(msgRange);
     }
   }
