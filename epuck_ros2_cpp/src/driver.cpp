@@ -47,7 +47,7 @@ extern "C" {
 #include "sensor_msgs/msg/imu.hpp"
 #include "sensor_msgs/msg/laser_scan.hpp"
 #include "sensor_msgs/msg/range.hpp"
-#include "std_msgs/msg/string.hpp"
+#include "std_msgs/msg/u_int8_multi_array.hpp"
 #include "tf2_ros/static_transform_broadcaster.h"
 #include "tf2_ros/transform_broadcaster.h"
 
@@ -116,8 +116,10 @@ public:
     mI2cMainErrCnt = 0;
 
     // Create subscirbers and publishers
-    mSubscription = create_subscription<geometry_msgs::msg::Twist>(
+    mTwistSubscription = create_subscription<geometry_msgs::msg::Twist>(
       "cmd_vel", 1, std::bind(&EPuckPublisher::onCmdVelReceived, this, std::placeholders::_1));
+    mRgbLedSubscription[0] = create_subscription<std_msgs::msg::UInt8MultiArray>(
+      "/led/rgb2", 1, std::bind(&EPuckPublisher::onRgbLedReceived, this, std::placeholders::_1, 2));
     mLaserPublisher = create_publisher<sensor_msgs::msg::LaserScan>("scan", 1);
     mOdometryPublisher = create_publisher<nav_msgs::msg::Odometry>("odom", 1);
     for (int i = 0; i < 8; i++)
@@ -177,6 +179,10 @@ public:
   ~EPuckPublisher() { close(mFile); }
 
 private:
+  void onRgbLedReceived(std_msgs::msg::UInt8MultiArray msg, int led_id) {
+
+  }
+
   void resetOdometry() {
     mPrevLeftWheelRaw = 0;
     mPrevRightWheelRaw = 0;
@@ -469,7 +475,8 @@ private:
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr mOdometryPublisher;
   rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr mRangePublisher[8];
   rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr mRangeTofPublisher;
-  rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr mSubscription;
+  rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr mTwistSubscription;
+  rclcpp::Subscription<std_msgs::msg::UInt8MultiArray>::SharedPtr mRgbLedSubscription[4];
 
   std::unique_ptr<tf2_ros::StaticTransformBroadcaster> mLaserBroadcaster;
   std::unique_ptr<tf2_ros::TransformBroadcaster> mDynamicBroadcaster;
