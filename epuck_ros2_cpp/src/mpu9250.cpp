@@ -43,17 +43,18 @@ int MPU9250::read_register(char reg, char *data, int size) {
 
 void MPU9250::read_raw(int16_t *rawAccelerometer, int16_t *rawGyroscope) {
   int status;
+  static char buffer[6];
 
   for (int i = 0; i < 5; i++) {
     status = mI2c->setAddress(mAddress);
 
-    status ^= read_register(ACCEL_XOUT_H, mBuffer, 6);
+    status ^= read_register(ACCEL_XOUT_H, buffer, 6);
     for (int i = 0; i < 3; i++)
-      rawAccelerometer[i] = (mBuffer[i * 2 + 1] & 0x00FF) | ((mBuffer[i * 2] << 8) & 0xFF00);
+      rawAccelerometer[i] = (buffer[i * 2 + 1] & 0x00FF) | ((buffer[i * 2] << 8) & 0xFF00);
 
-    status ^= read_register(GYRO_XOUT_H, mBuffer, 6);
+    status ^= read_register(GYRO_XOUT_H, buffer, 6);
     for (int i = 0; i < 3; i++)
-      rawGyroscope[i] = (mBuffer[i * 2 + 1] & 0x00FF) | ((mBuffer[i * 2] << 8) & 0xFF00);
+      rawGyroscope[i] = (buffer[i * 2 + 1] & 0x00FF) | ((buffer[i * 2] << 8) & 0xFF00);
 
     if (status)
       mAddress = (mAddress == MPU9250_ADDRESS_AD1_1) ? MPU9250_ADDRESS_AD1_0 : MPU9250_ADDRESS_AD1_1;
@@ -67,19 +68,22 @@ void MPU9250::calibrate() {
 }
 
 void MPU9250::read() {
+  static int16_t rawGyroscope[3];
+  static int16_t rawAccelerometer[3];
+
   // Read accelerometer and gyroscope data
-  read_raw(mRawAccelerometer, mRawGyroscope);
-  
+  read_raw(rawAccelerometer, rawGyroscope);
+
   // Apply calibration
   for (int i = 0; i < 3; i++) {
-    mRawAccelerometer[i] -= mOffsetAccelerometer[i];
-    mRawGyroscope[i] -= mOffsetGyroscope[i];
+    rawAccelerometer[i] -= mOffsetAccelerometer[i];
+    rawGyroscope[i] -= mOffsetGyroscope[i];
   }
 
   // Scale data
   for (int i = 0; i < 3; i++) {
-    mAccelerometer[i] = ((float)mRawAccelerometer[i] / RAW2G) * G2MS2;
-    mGyroscope[i] = ((float)mRawGyroscope[i] / RAW2DEG) * (M_PI / 180);
+    mAccelerometer[i] = ((float)rawAccelerometer[i] / RAW2G) * G2MS2;
+    mGyroscope[i] = ((float)rawGyroscope[i] / RAW2DEG) * (M_PI / 180);
   }
 }
 

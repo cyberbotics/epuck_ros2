@@ -35,11 +35,8 @@ private:
   int read_register(char reg, char *data, int size);
   void read_raw(int16_t *rawAccelerometer, int16_t *rawGyroscope);
 
-  char mBuffer[6];
   float mGyroscope[3];
   float mAccelerometer[3];
-  int16_t mRawGyroscope[3];
-  int16_t mRawAccelerometer[3];
   int16_t mOffsetGyroscope[3];
   int16_t mOffsetAccelerometer[3];
   int mAddress;
