@@ -23,6 +23,7 @@ find_package(nav_msgs REQUIRED)
 
 add_executable(driver
   src/driver.cpp
+  src/mpu9250.cpp
   src/vl53l0x/tof.c
 )
 target_include_directories(driver PUBLIC
