@@ -455,9 +455,8 @@ private:
       publishDistanceData(stamp);
       publishOdometryData(stamp);
       mI2cMainErrCnt = 0;
-    } else {
+    } else
       mI2cMainErrCnt++;
-    }
 
     publishImuData();
   }
