@@ -32,7 +32,7 @@ MPU9250::MPU9250(std::shared_ptr<I2CWrapper> i2c) {
 }
 
 int MPU9250::read_register(char reg, char *data, int size) {
-  if (mI2c->readData(&reg, 1) != 1)
+  if (mI2c->writeData(&reg, 1) != 1)
     return -1;
 
   if (mI2c->readData(data, size) != size)
@@ -42,7 +42,7 @@ int MPU9250::read_register(char reg, char *data, int size) {
 }
 
 void MPU9250::read_raw(int16_t *rawAccelerometer, int16_t *rawGyroscope) {
-  int status = -1;
+  int status;
 
   for (int i = 0; i < 5; i++) {
     status = mI2c->setAddress(mAddress);
@@ -72,7 +72,6 @@ void MPU9250::read() {
   
   // Apply calibration
   for (int i = 0; i < 3; i++) {
-      // std::cout << mRawAccelerometer[i] << std::endl;
     mRawAccelerometer[i] -= mOffsetAccelerometer[i];
     mRawGyroscope[i] -= mOffsetGyroscope[i];
   }

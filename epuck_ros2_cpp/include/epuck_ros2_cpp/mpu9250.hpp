@@ -13,17 +13,18 @@
 // limitations under the License.
 
 #ifndef EPUCK_ROS2_CPP__MPU9250_HPP_
-#define EPUCK_ROS2_CPP__MPU9250_WRAPPER_HPP_
-
-#include "epuck_ros2_cpp/i2c_wrapper.hpp"
+#define EPUCK_ROS2_CPP__MPU9250_HPP_
 
 #include <inttypes.h>
 #include <memory>
 #include <vector>
 
+#include "epuck_ros2_cpp/i2c_wrapper.hpp"
+
 class MPU9250 {
 public:
-  MPU9250(std::shared_ptr<I2CWrapper> i2c);
+  MPU9250() = delete;
+  explicit MPU9250(std::shared_ptr<I2CWrapper> i2c);
   void calibrate();
   void read();
 
@@ -46,4 +47,4 @@ private:
   std::shared_ptr<I2CWrapper> mI2c;
 };
 
-#endif  // EPUCK_ROS2_CPP__I2C_WRAPPER_HPP_
+#endif  // EPUCK_ROS2_CPP__MPU9250_HPP_

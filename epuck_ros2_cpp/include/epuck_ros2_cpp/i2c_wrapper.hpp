@@ -36,7 +36,8 @@ public:
 
 class I2CWrapperTest : public I2CWrapper {
 public:
-  I2CWrapperTest() {}
+  I2CWrapperTest() = delete;
+
   explicit I2CWrapperTest(std::string device) {
     mBaseFilename = "/tmp" + device;
 
@@ -74,7 +75,7 @@ private:
 
 class I2CWrapperHW : public I2CWrapper {
 public:
-  I2CWrapperHW() {}
+  I2CWrapperHW() = delete;
 
   explicit I2CWrapperHW(std::string device) {
     mFile = open(device.c_str(), O_RDWR);
