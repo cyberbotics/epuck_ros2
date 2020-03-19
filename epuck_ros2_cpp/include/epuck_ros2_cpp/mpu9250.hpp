@@ -19,8 +19,7 @@
 
 #include <inttypes.h>
 #include <memory>
-
-#include "geometry_msgs/msg/vector3.hpp"
+#include <vector>
 
 class MPU9250 {
 public:
@@ -28,8 +27,8 @@ public:
   void calibrate();
   void read();
 
-  geometry_msgs::msg::Vector3 getAngularVelocity();
-  geometry_msgs::msg::Vector3 getLinearAcceleration();
+  std::vector<float> getAngularVelocity();
+  std::vector<float> getLinearAcceleration();
 
 private:
   int read_register(char reg, char *data, int size);

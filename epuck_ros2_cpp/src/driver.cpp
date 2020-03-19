@@ -44,9 +44,9 @@ extern "C" {
 #include "geometry_msgs/msg/twist.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "rclcpp/rclcpp.hpp"
+#include "sensor_msgs/msg/imu.hpp"
 #include "sensor_msgs/msg/laser_scan.hpp"
 #include "sensor_msgs/msg/range.hpp"
-#include "sensor_msgs/msg/imu.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "tf2_ros/static_transform_broadcaster.h"
 #include "tf2_ros/transform_broadcaster.h"
@@ -249,9 +249,16 @@ private:
     auto msg = sensor_msgs::msg::Imu();
 
     mImu->read();
+    auto angularVelocity = mImu->getAngularVelocity();
+    auto linearAcceleration = mImu->getLinearAcceleration();
+
     msg.header.stamp = now();
-    msg.angular_velocity = mImu->getAngularVelocity();
-    msg.linear_acceleration = mImu->getLinearAcceleration();
+    msg.angular_velocity.x = angularVelocity[0];
+    msg.angular_velocity.y = angularVelocity[1];
+    msg.angular_velocity.z = angularVelocity[2];
+    msg.linear_acceleration.x = linearAcceleration[0];
+    msg.linear_acceleration.y = linearAcceleration[1];
+    msg.linear_acceleration.z = linearAcceleration[2];
 
     mImuPublisher->publish(msg);
   }
@@ -451,6 +458,7 @@ private:
     } else {
       mI2cMainErrCnt++;
     }
+    
     publishImuData();
   }
 

@@ -22,7 +22,7 @@ import launch
 import launch_ros.actions
 import launch_testing.actions
 from geometry_msgs.msg import Twist
-from sensor_msgs.msg import Range, LaserScan
+from sensor_msgs.msg import Range, LaserScan, Imu
 from nav_msgs.msg import Odometry
 from rcl_interfaces.srv import SetParameters
 from rclpy.parameter import ParameterType, ParameterValue
@@ -54,10 +54,10 @@ def int162arr(val):
     return arr
 
 
-def read_params_from_i2c(idx=4):
+def read_params_from_i2c(idx=4, address=0x1F):
     params = {}
     for _ in range(3):
-        with open(f'/tmp/dev/i2c-{idx}_write', 'rb') as f:
+        with open(f'/tmp/dev/i2c-{idx}_write_' + str(address), 'rb') as f:
             buffer = list(f.read())
             if len(buffer) > 0:
                 params['left_speed'] = arr2int16(buffer[0:2])
@@ -67,7 +67,7 @@ def read_params_from_i2c(idx=4):
     return params, []
 
 
-def write_params_to_i2c(params, idx=4):
+def write_params_to_i2c(params, idx=4, address=0x1F):
     buffer = [0] * SENSORS_SIZE
 
     # Fill the buffer
@@ -87,7 +87,7 @@ def write_params_to_i2c(params, idx=4):
 
     # Write the buffer
     for _ in range(3):
-        with open(f'/tmp/dev/i2c-{idx}_read', 'wb') as f:
+        with open(f'/tmp/dev/i2c-{idx}_read_' + str(address), 'wb') as f:
             n_bytes = f.write(bytearray(buffer))
             if n_bytes == SENSORS_SIZE:
                 return
@@ -160,6 +160,10 @@ def generate_test_description():
     and the following example:
     https://github.com/ros2/launch_ros/blob/master/launch_testing_ros/test/examples/talker_listener_launch_test.py.
     """
+    # Inital IMU data
+    with open(f'/tmp/dev/i2c-4_read_' + str(0x68), 'wb') as f:
+        f.write(bytearray([0, 0] * 3))
+
     controller = launch_ros.actions.Node(
         package='epuck_ros2_cpp',
         node_executable='driver',
@@ -327,3 +331,26 @@ class TestController(unittest.TestCase):
             lambda msg: abs(msg.pose.pose.position.x < -0.01)
         )
         self.assertTrue(condition, 'Should move backward')
+
+    def test_imu(self, launch_service, proc_output):
+        with open(f'/tmp/dev/i2c-4_read_' + str(0x68), 'wb') as f:
+            f.write(bytearray([0]*6))
+        time.sleep(0.1)
+        condition = check_topic_condition(
+            self.node,
+            Imu,
+            'imu',
+            lambda msg: abs(msg.linear_acceleration.x < 0.01)
+        )
+        self.assertTrue(condition, 'Should publish zeros')
+
+        with open(f'/tmp/dev/i2c-4_read_' + str(0x68), 'wb') as f:
+            f.write(bytearray([127, 0] * 3))
+        time.sleep(0.1)
+        condition = check_topic_condition(
+            self.node,
+            Imu,
+            'imu',
+            lambda msg: msg.linear_acceleration.x > 1
+        )
+        self.assertTrue(condition, 'Should publish zeros')

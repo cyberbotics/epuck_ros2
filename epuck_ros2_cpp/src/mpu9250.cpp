@@ -69,32 +69,35 @@ void MPU9250::calibrate() {
 void MPU9250::read() {
   // Read accelerometer and gyroscope data
   read_raw(mRawAccelerometer, mRawGyroscope);
-
+  
   // Apply calibration
   for (int i = 0; i < 3; i++) {
+      // std::cout << mRawAccelerometer[i] << std::endl;
     mRawAccelerometer[i] -= mOffsetAccelerometer[i];
     mRawGyroscope[i] -= mOffsetGyroscope[i];
   }
 
   // Scale data
   for (int i = 0; i < 3; i++) {
-    mAccelerometer[i] = ((float)mRawAccelerometer[i] / RAW2G) / G2MS2;
+    mAccelerometer[i] = ((float)mRawAccelerometer[i] / RAW2G) * G2MS2;
     mGyroscope[i] = ((float)mRawGyroscope[i] / RAW2DEG) * (M_PI / 180);
   }
 }
 
-geometry_msgs::msg::Vector3 MPU9250::getAngularVelocity() {
-  geometry_msgs::msg::Vector3 vector;
-  vector.x = mGyroscope[0];
-  vector.y = mGyroscope[1];
-  vector.z = mGyroscope[2];
+std::vector<float> MPU9250::getAngularVelocity() {
+  std::vector<float> vector;
+  vector.reserve(3);
+  vector[0] = mGyroscope[0];
+  vector[1] = mGyroscope[1];
+  vector[2] = mGyroscope[2];
   return vector;
 }
 
-geometry_msgs::msg::Vector3 MPU9250::getLinearAcceleration() {
-  geometry_msgs::msg::Vector3 vector;
-  vector.x = mAccelerometer[0];
-  vector.y = mAccelerometer[1];
-  vector.z = mAccelerometer[2];
+std::vector<float> MPU9250::getLinearAcceleration() {
+  std::vector<float> vector;
+  vector.reserve(3);
+  vector[0] = mAccelerometer[0];
+  vector[1] = mAccelerometer[1];
+  vector[2] = mAccelerometer[2];
   return vector;
 }
