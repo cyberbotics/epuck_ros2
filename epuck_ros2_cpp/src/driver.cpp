@@ -253,12 +253,12 @@ private:
     auto linearAcceleration = mImu->getLinearAcceleration();
 
     msg.header.stamp = now();
-    msg.angular_velocity.x = angularVelocity[0];
-    msg.angular_velocity.y = angularVelocity[1];
+    msg.angular_velocity.x = angularVelocity[1];
+    msg.angular_velocity.y = angularVelocity[0];
     msg.angular_velocity.z = angularVelocity[2];
-    msg.linear_acceleration.x = linearAcceleration[0];
-    msg.linear_acceleration.y = linearAcceleration[1];
-    msg.linear_acceleration.z = linearAcceleration[2];
+    msg.linear_acceleration.x = linearAcceleration[1];
+    msg.linear_acceleration.y = linearAcceleration[0];
+    msg.linear_acceleration.z = linearAcceleration[2] + 9.81;
 
     mImuPublisher->publish(msg);
   }
@@ -458,7 +458,7 @@ private:
     } else {
       mI2cMainErrCnt++;
     }
-    
+
     publishImuData();
   }
 

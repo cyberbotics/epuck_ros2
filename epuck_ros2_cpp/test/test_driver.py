@@ -57,7 +57,7 @@ def int162arr(val):
 def read_params_from_i2c(idx=4, address=0x1F):
     params = {}
     for _ in range(3):
-        with open(f'/tmp/dev/i2c-{idx}_write_' + str(address), 'rb') as f:
+        with open(f'/tmp/dev/i2c-{idx}_write_' + str(address), 'r+b') as f:
             buffer = list(f.read())
             if len(buffer) > 0:
                 params['left_speed'] = arr2int16(buffer[0:2])
@@ -87,7 +87,7 @@ def write_params_to_i2c(params, idx=4, address=0x1F):
 
     # Write the buffer
     for _ in range(3):
-        with open(f'/tmp/dev/i2c-{idx}_read_' + str(address), 'wb') as f:
+        with open(f'/tmp/dev/i2c-{idx}_read_' + str(address), 'w+b') as f:
             n_bytes = f.write(bytearray(buffer))
             if n_bytes == SENSORS_SIZE:
                 return
@@ -161,8 +161,8 @@ def generate_test_description():
     https://github.com/ros2/launch_ros/blob/master/launch_testing_ros/test/examples/talker_listener_launch_test.py.
     """
     # Inital IMU data
-    with open(f'/tmp/dev/i2c-4_read_' + str(0x68), 'wb') as f:
-        f.write(bytearray([0, 0] * 3))
+    with open(f'/tmp/dev/i2c-4_read_' + str(0x68), 'w+b') as f:
+        f.write(bytearray([0] * 6))
 
     controller = launch_ros.actions.Node(
         package='epuck_ros2_cpp',
@@ -333,7 +333,7 @@ class TestController(unittest.TestCase):
         self.assertTrue(condition, 'Should move backward')
 
     def test_imu(self, launch_service, proc_output):
-        with open(f'/tmp/dev/i2c-4_read_' + str(0x68), 'wb') as f:
+        with open(f'/tmp/dev/i2c-4_read_' + str(0x68), 'w+b') as f:
             f.write(bytearray([0]*6))
         time.sleep(0.1)
         condition = check_topic_condition(
@@ -342,9 +342,9 @@ class TestController(unittest.TestCase):
             'imu',
             lambda msg: abs(msg.linear_acceleration.x < 0.01)
         )
-        self.assertTrue(condition, 'Should publish zeros')
+        self.assertTrue(condition, 'IMU should publish zeros')
 
-        with open(f'/tmp/dev/i2c-4_read_' + str(0x68), 'wb') as f:
+        with open(f'/tmp/dev/i2c-4_read_' + str(0x68), 'w+b') as f:
             f.write(bytearray([127, 0] * 3))
         time.sleep(0.1)
         condition = check_topic_condition(
@@ -353,4 +353,4 @@ class TestController(unittest.TestCase):
             'imu',
             lambda msg: msg.linear_acceleration.x > 1
         )
-        self.assertTrue(condition, 'Should publish zeros')
+        self.assertTrue(condition, 'IMU should publish value greater than 1m/s^2')
