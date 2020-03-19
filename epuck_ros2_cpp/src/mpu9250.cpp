@@ -45,7 +45,7 @@ void MPU9250::read_raw(int16_t *rawAccelerometer, int16_t *rawGyroscope) {
   int status;
   static char buffer[6];
 
-  for (int i = 0; i < 5; i++) {
+  for (int j = 0; j < 5; j++) {
     status = mI2c->setAddress(mAddress);
 
     status ^= read_register(ACCEL_XOUT_H, buffer, 6);
