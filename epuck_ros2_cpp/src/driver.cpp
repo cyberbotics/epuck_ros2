@@ -38,11 +38,13 @@ extern "C" {
 }
 
 #include "epuck_ros2_cpp/i2c_wrapper.hpp"
+#include "epuck_ros2_cpp/mpu9250.hpp"
 #include "geometry_msgs/msg/quaternion.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "rclcpp/rclcpp.hpp"
+#include "sensor_msgs/msg/imu.hpp"
 #include "sensor_msgs/msg/laser_scan.hpp"
 #include "sensor_msgs/msg/range.hpp"
 #include "std_msgs/msg/string.hpp"
@@ -98,9 +100,11 @@ public:
 
     // Create I2C object
     if (type == "test")
-      mI2cMain = std::make_unique<I2CWrapperTest>("/dev/i2c-4");
+      mI2cMain = std::make_shared<I2CWrapperTest>("/dev/i2c-4");
     else
-      mI2cMain = std::make_unique<I2CWrapperHW>("/dev/i2c-4");
+      mI2cMain = std::make_shared<I2CWrapperHW>("/dev/i2c-4");
+    mImu = std::make_shared<MPU9250>(mI2cMain);
+    mImu->calibrate();
     mTofInitStatus = tofInit(4, 0x29, 1);
     if (!mTofInitStatus)
       RCLCPP_WARN(get_logger(), "ToF device is not accessible!");
@@ -119,6 +123,7 @@ public:
     for (int i = 0; i < 8; i++)
       mRangePublisher[i] = create_publisher<sensor_msgs::msg::Range>("ps" + std::to_string(i), 1);
     mRangeTofPublisher = create_publisher<sensor_msgs::msg::Range>("tof", 1);
+    mImuPublisher = create_publisher<sensor_msgs::msg::Imu>("imu", 1);
     mTimer = create_wall_timer(std::chrono::milliseconds(PERIOD_MS), std::bind(&EPuckPublisher::updateCallback, this));
 
     // Dynamic tf broadcaster: Odometry
@@ -238,6 +243,24 @@ private:
     mMsgActuators[1] = (leftVelocityBig >> 8) & 0xFF;
     mMsgActuators[2] = rightVelocityBig & 0xFF;
     mMsgActuators[3] = (rightVelocityBig >> 8) & 0xFF;
+  }
+
+  void publishImuData() {
+    auto msg = sensor_msgs::msg::Imu();
+
+    mImu->read();
+    auto angularVelocity = mImu->getAngularVelocity();
+    auto linearAcceleration = mImu->getLinearAcceleration();
+
+    msg.header.stamp = now();
+    msg.angular_velocity.x = angularVelocity[1];
+    msg.angular_velocity.y = angularVelocity[0];
+    msg.angular_velocity.z = angularVelocity[2];
+    msg.linear_acceleration.x = linearAcceleration[1];
+    msg.linear_acceleration.y = linearAcceleration[0];
+    msg.linear_acceleration.z = linearAcceleration[2] + 9.81;
+
+    mImuPublisher->publish(msg);
   }
 
   void publishDistanceData(rclcpp::Time &stamp) {
@@ -432,14 +455,16 @@ private:
       publishDistanceData(stamp);
       publishOdometryData(stamp);
       mI2cMainErrCnt = 0;
-    } else {
+    } else
       mI2cMainErrCnt++;
-    }
+
+    publishImuData();
   }
 
   OnSetParametersCallbackHandle::SharedPtr mCallbackHandler;
 
   rclcpp::TimerBase::SharedPtr mTimer;
+  rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr mImuPublisher;
   rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr mLaserPublisher;
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr mOdometryPublisher;
   rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr mRangePublisher[8];
@@ -450,7 +475,9 @@ private:
   std::unique_ptr<tf2_ros::TransformBroadcaster> mDynamicBroadcaster;
   std::unique_ptr<tf2_ros::StaticTransformBroadcaster> mInfraredBroadcasters[9];
 
-  std::unique_ptr<I2CWrapper> mI2cMain;
+  std::shared_ptr<I2CWrapper> mI2cMain;
+
+  std::shared_ptr<MPU9250> mImu;
 
   int mFile;
   char mMsgActuators[MSG_ACTUATORS_SIZE];

@@ -36,7 +36,8 @@ public:
 
 class I2CWrapperTest : public I2CWrapper {
 public:
-  I2CWrapperTest() {}
+  I2CWrapperTest() = delete;
+
   explicit I2CWrapperTest(std::string device) {
     mBaseFilename = "/tmp" + device;
 
@@ -47,14 +48,12 @@ public:
   }
 
   int setAddress(int address) {
-    std::fstream stream(mBaseFilename + "_ioctl", std::ios::out | std::ios::binary);
-    stream << address << std::endl;
-    stream.close();
+    mAddress = address;
     return 1;
   }
 
   int readData(char *buffer, int size) {
-    std::fstream stream(mBaseFilename + "_read", std::ios::in | std::ios::binary);
+    std::fstream stream(mBaseFilename + "_read_" + std::to_string(mAddress), std::ios::in | std::ios::binary);
     stream.read(buffer, size);
     stream.close();
     return size;
@@ -62,7 +61,7 @@ public:
 
   int writeData(char *buffer, int size) {
     std::fstream stream;
-    stream.open(mBaseFilename + "_write", std::ios::out | std::ios::binary);
+    stream.open(mBaseFilename + "_write_" + std::to_string(mAddress), std::ios::out | std::ios::binary);
 
     stream.write(buffer, size);
     stream.close();
@@ -71,15 +70,15 @@ public:
 
 private:
   std::string mBaseFilename;
+  int mAddress;
 };
 
 class I2CWrapperHW : public I2CWrapper {
 public:
-  I2CWrapperHW() {}
+  I2CWrapperHW() = delete;
 
   explicit I2CWrapperHW(std::string device) {
     mFile = open(device.c_str(), O_RDWR);
-    std::cout << mFile << std::endl;
     if (mFile < 0)
       std::cout << "Cannot open file: " << device << std::endl;
   }
