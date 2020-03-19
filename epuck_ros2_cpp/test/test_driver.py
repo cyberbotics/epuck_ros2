@@ -27,6 +27,7 @@ from nav_msgs.msg import Odometry
 from rcl_interfaces.srv import SetParameters
 from rclpy.parameter import ParameterType, ParameterValue
 from rcl_interfaces.msg._parameter import Parameter
+import os
 
 
 SENSORS_SIZE = 47
@@ -161,6 +162,8 @@ def generate_test_description():
     https://github.com/ros2/launch_ros/blob/master/launch_testing_ros/test/examples/talker_listener_launch_test.py.
     """
     # Inital IMU data
+    if not os.path.exists('/tmp/dev'):
+        os.makedirs('/tmp/dev')
     with open(f'/tmp/dev/i2c-4_read_' + str(0x68), 'w+b') as f:
         f.write(bytearray([0] * 6))
 
@@ -353,4 +356,5 @@ class TestController(unittest.TestCase):
             'imu',
             lambda msg: msg.linear_acceleration.x > 1
         )
-        self.assertTrue(condition, 'IMU should publish value greater than 1m/s^2')
+        self.assertTrue(
+            condition, 'IMU should publish value greater than 1m/s^2')
