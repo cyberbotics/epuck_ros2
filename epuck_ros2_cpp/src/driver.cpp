@@ -160,8 +160,9 @@ public:
     laserTransform.transform.translation.z = 0;
     mLaserBroadcaster->sendTransform(laserTransform);
 
-    // Static tf broadcaster: Range (infrared)
+    
     for (int i = 0; i < 8; i++) {
+      // Static tf broadcaster: Range (infrared)
       mInfraredBroadcasters[i] = std::make_unique<tf2_ros::StaticTransformBroadcaster>(this);
       geometry_msgs::msg::TransformStamped infraredTransform;
       infraredTransform.header.stamp = now();
@@ -172,6 +173,18 @@ public:
       infraredTransform.transform.translation.y = SENSOR_DIST_FROM_CENTER * sin(DISTANCE_SENSOR_ANGLE[i]);
       infraredTransform.transform.translation.z = 0;
       mInfraredBroadcasters[i]->sendTransform(infraredTransform);
+
+      // Static tf broadcaster: Light sensors
+      mLightSensorBroadcasters[i] = std::make_unique<tf2_ros::StaticTransformBroadcaster>(this);
+      geometry_msgs::msg::TransformStamped lightTransform;
+      lightTransform.header.stamp = now();
+      lightTransform.header.frame_id = "base_link";
+      lightTransform.child_frame_id = "ls" + std::to_string(i);
+      lightTransform.transform.rotation = EPuckPublisher::euler2quaternion(0, 0, DISTANCE_SENSOR_ANGLE[i]);
+      lightTransform.transform.translation.x = SENSOR_DIST_FROM_CENTER * cos(DISTANCE_SENSOR_ANGLE[i]);
+      lightTransform.transform.translation.y = SENSOR_DIST_FROM_CENTER * sin(DISTANCE_SENSOR_ANGLE[i]);
+      lightTransform.transform.translation.z = 0;
+      mLightSensorBroadcasters[i]->sendTransform(lightTransform);
     }
 
     // Static tf broadcaster: Range (ToF)
@@ -518,6 +531,7 @@ private:
   std::unique_ptr<tf2_ros::StaticTransformBroadcaster> mLaserBroadcaster;
   std::unique_ptr<tf2_ros::TransformBroadcaster> mDynamicBroadcaster;
   std::unique_ptr<tf2_ros::StaticTransformBroadcaster> mInfraredBroadcasters[9];
+  std::unique_ptr<tf2_ros::StaticTransformBroadcaster> mLightSensorBroadcasters[8];
 
   std::shared_ptr<I2CWrapper> mI2cMain;
 
