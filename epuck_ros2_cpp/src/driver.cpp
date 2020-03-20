@@ -47,6 +47,7 @@ extern "C" {
 #include "sensor_msgs/msg/imu.hpp"
 #include "sensor_msgs/msg/laser_scan.hpp"
 #include "sensor_msgs/msg/range.hpp"
+#include "std_msgs/msg/bool.hpp"
 #include "std_msgs/msg/u_int8_multi_array.hpp"
 #include "tf2_ros/static_transform_broadcaster.h"
 #include "tf2_ros/transform_broadcaster.h"
@@ -118,8 +119,18 @@ public:
     // Create subscirbers and publishers
     mTwistSubscription = create_subscription<geometry_msgs::msg::Twist>(
       "cmd_vel", 1, std::bind(&EPuckPublisher::onCmdVelReceived, this, std::placeholders::_1));
-    mRgbLedSubscription[0] = create_subscription<std_msgs::msg::UInt8MultiArray>(
-      "/led/rgb2", 1, std::bind(&EPuckPublisher::onRgbLedReceived, this, std::placeholders::_1, 2));
+    for (int i = 0; i < 4; i++) {
+      std::function<void(const std_msgs::msg::UInt8MultiArray::SharedPtr)> f =
+        std::bind(&EPuckPublisher::onRgbLedReceived, this, std::placeholders::_1, i);
+      mRgbLedSubscription[i] =
+        create_subscription<std_msgs::msg::UInt8MultiArray>("/led/rgb" + std::to_string(i * 2 + 2), 1, f);
+    }
+    for (int i = 0; i < 4; i++) {
+      std::function<void(const std_msgs::msg::Bool::SharedPtr)> f =
+        std::bind(&EPuckPublisher::onLedReceived, this, std::placeholders::_1, i);
+      mLedSubscription[i] = create_subscription<std_msgs::msg::Bool>(
+        "/led/led" + std::to_string(i * 2 + 1), 1, f);
+    }
     mLaserPublisher = create_publisher<sensor_msgs::msg::LaserScan>("scan", 1);
     mOdometryPublisher = create_publisher<nav_msgs::msg::Odometry>("odom", 1);
     for (int i = 0; i < 8; i++)
@@ -179,8 +190,14 @@ public:
   ~EPuckPublisher() { close(mFile); }
 
 private:
-  void onRgbLedReceived(std_msgs::msg::UInt8MultiArray msg, int led_id) {
-
+  void onLedReceived(const std_msgs::msg::Bool::SharedPtr msg, int index) {
+    if (msg->data) 
+      mMsgActuators[5] |= (1 << index);
+    else
+      mMsgActuators[5] &= ~(1 << index);
+  }
+  void onRgbLedReceived(const std_msgs::msg::UInt8MultiArray::SharedPtr msg, int index) {
+    std::copy(msg->data.begin(), msg->data.end(), mMsgActuators + 6 + index*3);
   }
 
   void resetOdometry() {
@@ -477,6 +494,7 @@ private:
   rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr mRangeTofPublisher;
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr mTwistSubscription;
   rclcpp::Subscription<std_msgs::msg::UInt8MultiArray>::SharedPtr mRgbLedSubscription[4];
+  rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr mLedSubscription[4];
 
   std::unique_ptr<tf2_ros::StaticTransformBroadcaster> mLaserBroadcaster;
   std::unique_ptr<tf2_ros::TransformBroadcaster> mDynamicBroadcaster;
