@@ -226,9 +226,9 @@ private:
       mMsgActuators[5] &= ~(1 << index);
   }
   void onRgbLedReceived(const std_msgs::msg::Int32::SharedPtr msg, int index) {
-    mMsgActuators[6 + index * 3] = (msg->data >> 16) & 0xFF;
-    mMsgActuators[6 + index * 3 + 1] = (msg->data >> 8) & 0xFF;
-    mMsgActuators[6 + index * 3 + 2] = msg->data & 0xFF;
+    mMsgActuators[6 + index * 3] = ((msg->data >> 16) & 0xFF) / 2.55;
+    mMsgActuators[6 + index * 3 + 1] = ((msg->data >> 8) & 0xFF) / 2.55;
+    mMsgActuators[6 + index * 3 + 2] = (msg->data & 0xFF) / 2.55;
   }
 
   void resetOdometry() {

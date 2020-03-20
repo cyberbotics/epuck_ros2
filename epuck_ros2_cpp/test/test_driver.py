@@ -23,7 +23,7 @@ import launch_ros.actions
 import launch_testing.actions
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Range, LaserScan, Imu
-from std_msgs.msg import UInt8MultiArray
+from std_msgs.msg import Int32
 from nav_msgs.msg import Odometry
 from rcl_interfaces.srv import SetParameters
 from rclpy.parameter import ParameterType, ParameterValue
@@ -364,17 +364,17 @@ class TestController(unittest.TestCase):
     def test_rgb(self, launch_service, proc_output):
         # Publish a message
         pub = self.node.create_publisher(
-            UInt8MultiArray,
+            Int32,
             'led1',
             1
         )
         for _ in range(3):
-            msg = UInt8MultiArray()
-            msg.data = [128, 128, 128]
+            msg = Int32()
+            msg.data = 0xFFFFFF
             pub.publish(msg)
             time.sleep(0.1)
 
         self.node.destroy_publisher(pub)
         # Check what has been written to I2C
         params, _ = read_params_from_i2c()
-        self.assertTrue(all([i == 128 for i in params['led1']]))
+        self.assertTrue(all([i == 100 for i in params['led1']]))
