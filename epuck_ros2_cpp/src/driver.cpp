@@ -341,7 +341,7 @@ private:
 
   void publishIlluminanceData(rclcpp::Time &stamp) {
     for (int i = 0; i < 8; i++) {
-      int16_t raw = (mMsgSensors[16 + i * 2] & 0x00FF) | ((mMsgSensors[16 + 1 + i * 2] << 8) & 0xFF00);
+      const int16_t raw = (mMsgSensors[16 + i * 2] & 0x00FF) | ((mMsgSensors[16 + 1 + i * 2] << 8) & 0xFF00);
 
       // Note that here we may need to calibrate the sensors since the expected
       // unit is lux
