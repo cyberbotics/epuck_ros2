@@ -44,6 +44,7 @@ extern "C" {
 #include "geometry_msgs/msg/twist.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "rclcpp/rclcpp.hpp"
+#include "sensor_msgs/msg/illuminance.hpp"
 #include "sensor_msgs/msg/imu.hpp"
 #include "sensor_msgs/msg/laser_scan.hpp"
 #include "sensor_msgs/msg/range.hpp"
@@ -128,13 +129,15 @@ public:
     for (int i = 0; i < 4; i++) {
       std::function<void(const std_msgs::msg::Bool::SharedPtr)> f =
         std::bind(&EPuckPublisher::onLedReceived, this, std::placeholders::_1, i);
-      mLedSubscription[i] = create_subscription<std_msgs::msg::Bool>(
-        "/led/led" + std::to_string(i * 2 + 1), 1, f);
+      mLedSubscription[i] = create_subscription<std_msgs::msg::Bool>("/led/led" + std::to_string(i * 2 + 1), 1, f);
     }
     mLaserPublisher = create_publisher<sensor_msgs::msg::LaserScan>("scan", 1);
+
     mOdometryPublisher = create_publisher<nav_msgs::msg::Odometry>("odom", 1);
-    for (int i = 0; i < 8; i++)
+    for (int i = 0; i < 8; i++) {
       mRangePublisher[i] = create_publisher<sensor_msgs::msg::Range>("ps" + std::to_string(i), 1);
+      mIlluminancePublisher[i] = create_publisher<sensor_msgs::msg::Illuminance>("ls" + std::to_string(i), 1);
+    }
     mRangeTofPublisher = create_publisher<sensor_msgs::msg::Range>("tof", 1);
     mImuPublisher = create_publisher<sensor_msgs::msg::Imu>("imu", 1);
     mTimer = create_wall_timer(std::chrono::milliseconds(PERIOD_MS), std::bind(&EPuckPublisher::updateCallback, this));
@@ -191,13 +194,13 @@ public:
 
 private:
   void onLedReceived(const std_msgs::msg::Bool::SharedPtr msg, int index) {
-    if (msg->data) 
+    if (msg->data)
       mMsgActuators[5] |= (1 << index);
     else
       mMsgActuators[5] &= ~(1 << index);
   }
   void onRgbLedReceived(const std_msgs::msg::UInt8MultiArray::SharedPtr msg, int index) {
-    std::copy(msg->data.begin(), msg->data.end(), mMsgActuators + 6 + index*3);
+    std::copy(msg->data.begin(), msg->data.end(), mMsgActuators + 6 + index * 3);
   }
 
   void resetOdometry() {
@@ -284,6 +287,20 @@ private:
     msg.linear_acceleration.z = linearAcceleration[2] + 9.81;
 
     mImuPublisher->publish(msg);
+  }
+
+  void publishIlluminance(rclcpp::Time &stamp) {
+    for (int i = 0; i < 8; i++) {
+      int16_t raw = (mMsgSensors[16 + i * 2] & 0x00FF) | ((mMsgSensors[16 + 1 + i * 2] << 8) & 0xFF00);
+
+      // Note that here we may need to calibrate the sensors since the expected
+      // unit is lux
+      auto msg = sensor_msgs::msg::Illuminance();
+      msg.header.stamp = stamp;
+      msg.illuminance = (double)raw;
+
+      mIlluminancePublisher[i]->publish(msg);
+    }
   }
 
   void publishDistanceData(rclcpp::Time &stamp) {
@@ -477,6 +494,7 @@ private:
     if (success) {
       publishDistanceData(stamp);
       publishOdometryData(stamp);
+      publishIlluminance(stamp);
       mI2cMainErrCnt = 0;
     } else
       mI2cMainErrCnt++;
@@ -488,6 +506,7 @@ private:
 
   rclcpp::TimerBase::SharedPtr mTimer;
   rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr mImuPublisher;
+  rclcpp::Publisher<sensor_msgs::msg::Illuminance>::SharedPtr mIlluminancePublisher[8];
   rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr mLaserPublisher;
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr mOdometryPublisher;
   rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr mRangePublisher[8];
