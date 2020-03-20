@@ -321,7 +321,7 @@ private:
     mI2cMain->setAddress(GROUND_SENSOR_ADDRESS);
 
     for (int i = 0; i < 3; i++) {
-      int16_t raw = (mI2cMain->readInt8Register(2 * i) << 8) | mI2cMain->readInt8Register(2 * i + 1);
+      const int16_t raw = (mI2cMain->readInt8Register(2 * i) << 8) | mI2cMain->readInt8Register(2 * i + 1);
 
       float k = -0.016 / (1000 - 300);
       float n = -1000 * k;
