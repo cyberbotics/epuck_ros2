@@ -60,6 +60,7 @@ extern "C" {
 #define OUT_OF_RANGE 0
 #define ENCODER_RESOLUTION 1000.0
 #define ODOM_OVERFLOW_GRACE_TICKS 2000
+#define GROUND_SENSOR_ADDRESS 0x60
 
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
@@ -132,7 +133,8 @@ public:
       mLedSubscription[i] = create_subscription<std_msgs::msg::Bool>("/led/led" + std::to_string(i * 2 + 1), 1, f);
     }
     mLaserPublisher = create_publisher<sensor_msgs::msg::LaserScan>("scan", 1);
-
+    for (int i = 0; i < 3; i++)
+      mGroundRangePublisher[i] = create_publisher<sensor_msgs::msg::Range>("/gs" + std::to_string(i), 1);
     mOdometryPublisher = create_publisher<nav_msgs::msg::Odometry>("odom", 1);
     for (int i = 0; i < 8; i++) {
       mRangePublisher[i] = create_publisher<sensor_msgs::msg::Range>("ps" + std::to_string(i), 1);
@@ -160,7 +162,6 @@ public:
     laserTransform.transform.translation.z = 0;
     mLaserBroadcaster->sendTransform(laserTransform);
 
-    
     for (int i = 0; i < 8; i++) {
       // Static tf broadcaster: Range (infrared)
       mInfraredBroadcasters[i] = std::make_unique<tf2_ros::StaticTransformBroadcaster>(this);
@@ -302,7 +303,29 @@ private:
     mImuPublisher->publish(msg);
   }
 
-  void publishIlluminance(rclcpp::Time &stamp) {
+  void publishGroundSensorData() {
+    auto msg = sensor_msgs::msg::Range();
+    mI2cMain->setAddress(GROUND_SENSOR_ADDRESS);
+
+    for (int i = 0; i < 3; i++) {
+      int16_t raw = (mI2cMain->readInt8Register(i) << 8) | mI2cMain->readInt8Register(i + 1);
+
+      float k = -0.016 / (1000 - 300);
+      float n = -1000 * k;
+
+      auto msgRange = sensor_msgs::msg::Range();
+      msgRange.header.stamp = now();
+      msgRange.header.frame_id = "gs" + std::to_string(i);
+      msgRange.radiation_type = sensor_msgs::msg::Range::INFRARED;
+      msgRange.min_range = 0;
+      msgRange.max_range = 0.016;
+      msgRange.range = k * raw + n;
+      msgRange.field_of_view = 15 * M_PI / 180;
+      mRangePublisher[i]->publish(msgRange);
+    }
+  }
+
+  void publishIlluminanceData(rclcpp::Time &stamp) {
     for (int i = 0; i < 8; i++) {
       int16_t raw = (mMsgSensors[16 + i * 2] & 0x00FF) | ((mMsgSensors[16 + 1 + i * 2] << 8) & 0xFF00);
 
@@ -507,12 +530,13 @@ private:
     if (success) {
       publishDistanceData(stamp);
       publishOdometryData(stamp);
-      publishIlluminance(stamp);
+      publishIlluminanceData(stamp);
       mI2cMainErrCnt = 0;
     } else
       mI2cMainErrCnt++;
 
     publishImuData();
+    publishGroundSensorData();
   }
 
   OnSetParametersCallbackHandle::SharedPtr mCallbackHandler;
@@ -523,6 +547,7 @@ private:
   rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr mLaserPublisher;
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr mOdometryPublisher;
   rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr mRangePublisher[8];
+  rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr mGroundRangePublisher[3];
   rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr mRangeTofPublisher;
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr mTwistSubscription;
   rclcpp::Subscription<std_msgs::msg::UInt8MultiArray>::SharedPtr mRgbLedSubscription[4];
@@ -534,7 +559,6 @@ private:
   std::unique_ptr<tf2_ros::StaticTransformBroadcaster> mLightSensorBroadcasters[8];
 
   std::shared_ptr<I2CWrapper> mI2cMain;
-
   std::shared_ptr<MPU9250> mImu;
 
   int mFile;
