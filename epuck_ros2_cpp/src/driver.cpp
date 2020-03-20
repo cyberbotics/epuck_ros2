@@ -49,7 +49,7 @@ extern "C" {
 #include "sensor_msgs/msg/laser_scan.hpp"
 #include "sensor_msgs/msg/range.hpp"
 #include "std_msgs/msg/bool.hpp"
-#include "std_msgs/msg/u_int8_multi_array.hpp"
+#include "std_msgs/msg/int32.hpp"
 #include "tf2_ros/static_transform_broadcaster.h"
 #include "tf2_ros/transform_broadcaster.h"
 
@@ -122,15 +122,14 @@ public:
     mTwistSubscription = create_subscription<geometry_msgs::msg::Twist>(
       "cmd_vel", 1, std::bind(&EPuckPublisher::onCmdVelReceived, this, std::placeholders::_1));
     for (int i = 0; i < 4; i++) {
-      std::function<void(const std_msgs::msg::UInt8MultiArray::SharedPtr)> f =
+      std::function<void(const std_msgs::msg::Int32::SharedPtr)> f =
         std::bind(&EPuckPublisher::onRgbLedReceived, this, std::placeholders::_1, i);
-      mRgbLedSubscription[i] =
-        create_subscription<std_msgs::msg::UInt8MultiArray>("/led/rgb" + std::to_string(i * 2 + 2), 1, f);
+      mRgbLedSubscription[i] = create_subscription<std_msgs::msg::Int32>("/led" + std::to_string(i * 2 + 1), 1, f);
     }
     for (int i = 0; i < 4; i++) {
       std::function<void(const std_msgs::msg::Bool::SharedPtr)> f =
         std::bind(&EPuckPublisher::onLedReceived, this, std::placeholders::_1, i);
-      mLedSubscription[i] = create_subscription<std_msgs::msg::Bool>("/led/led" + std::to_string(i * 2 + 1), 1, f);
+      mLedSubscription[i] = create_subscription<std_msgs::msg::Bool>("/led" + std::to_string(i * 2), 1, f);
     }
     mLaserPublisher = create_publisher<sensor_msgs::msg::LaserScan>("scan", 1);
     for (int i = 0; i < 3; i++)
@@ -188,6 +187,19 @@ public:
       mLightSensorBroadcasters[i]->sendTransform(lightTransform);
     }
 
+    for (int i = 0; i < 3; i++) {
+      mGroundBroadcasters[i] = std::make_unique<tf2_ros::StaticTransformBroadcaster>(this);
+      geometry_msgs::msg::TransformStamped groundTransform;
+      groundTransform.header.stamp = now();
+      groundTransform.header.frame_id = "base_link";
+      groundTransform.child_frame_id = "gs" + std::to_string(i);
+      groundTransform.transform.rotation = EPuckPublisher::euler2quaternion(0, 0, DISTANCE_SENSOR_ANGLE[i]);
+      groundTransform.transform.translation.x = SENSOR_DIST_FROM_CENTER - 0.005;
+      groundTransform.transform.translation.y = 0.009 - i * 0.009;
+      groundTransform.transform.translation.z = 0;
+      mGroundBroadcasters[i]->sendTransform(groundTransform);
+    }
+
     // Static tf broadcaster: Range (ToF)
     mInfraredBroadcasters[8] = std::make_unique<tf2_ros::StaticTransformBroadcaster>(this);
     geometry_msgs::msg::TransformStamped infraredTransform;
@@ -213,8 +225,10 @@ private:
     else
       mMsgActuators[5] &= ~(1 << index);
   }
-  void onRgbLedReceived(const std_msgs::msg::UInt8MultiArray::SharedPtr msg, int index) {
-    std::copy(msg->data.begin(), msg->data.end(), mMsgActuators + 6 + index * 3);
+  void onRgbLedReceived(const std_msgs::msg::Int32::SharedPtr msg, int index) {
+    mMsgActuators[6 + index * 3] = (msg->data >> 16) & 0xFF;
+    mMsgActuators[6 + index * 3 + 1] = (msg->data >> 8) & 0xFF;
+    mMsgActuators[6 + index * 3 + 2] = msg->data & 0xFF;
   }
 
   void resetOdometry() {
@@ -304,24 +318,23 @@ private:
   }
 
   void publishGroundSensorData() {
-    auto msg = sensor_msgs::msg::Range();
     mI2cMain->setAddress(GROUND_SENSOR_ADDRESS);
 
     for (int i = 0; i < 3; i++) {
-      int16_t raw = (mI2cMain->readInt8Register(i) << 8) | mI2cMain->readInt8Register(i + 1);
+      int16_t raw = (mI2cMain->readInt8Register(2 * i) << 8) | mI2cMain->readInt8Register(2 * i + 1);
 
       float k = -0.016 / (1000 - 300);
       float n = -1000 * k;
 
-      auto msgRange = sensor_msgs::msg::Range();
-      msgRange.header.stamp = now();
-      msgRange.header.frame_id = "gs" + std::to_string(i);
-      msgRange.radiation_type = sensor_msgs::msg::Range::INFRARED;
-      msgRange.min_range = 0;
-      msgRange.max_range = 0.016;
-      msgRange.range = k * raw + n;
-      msgRange.field_of_view = 15 * M_PI / 180;
-      mRangePublisher[i]->publish(msgRange);
+      auto msg = sensor_msgs::msg::Range();
+      msg.header.stamp = now();
+      msg.header.frame_id = "gs" + std::to_string(i);
+      msg.radiation_type = sensor_msgs::msg::Range::INFRARED;
+      msg.min_range = 0;
+      msg.max_range = 0.016;
+      msg.range = k * raw + n;
+      msg.field_of_view = 15 * M_PI / 180;
+      mGroundRangePublisher[i]->publish(msg);
     }
   }
 
@@ -550,11 +563,12 @@ private:
   rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr mGroundRangePublisher[3];
   rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr mRangeTofPublisher;
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr mTwistSubscription;
-  rclcpp::Subscription<std_msgs::msg::UInt8MultiArray>::SharedPtr mRgbLedSubscription[4];
+  rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr mRgbLedSubscription[4];
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr mLedSubscription[4];
 
   std::unique_ptr<tf2_ros::StaticTransformBroadcaster> mLaserBroadcaster;
   std::unique_ptr<tf2_ros::TransformBroadcaster> mDynamicBroadcaster;
+  std::unique_ptr<tf2_ros::StaticTransformBroadcaster> mGroundBroadcasters[3];
   std::unique_ptr<tf2_ros::StaticTransformBroadcaster> mInfraredBroadcasters[9];
   std::unique_ptr<tf2_ros::StaticTransformBroadcaster> mLightSensorBroadcasters[8];
 

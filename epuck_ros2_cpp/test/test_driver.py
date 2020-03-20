@@ -64,7 +64,7 @@ def read_params_from_i2c(idx=4, address=0x1F):
             if len(buffer) > 0:
                 params['left_speed'] = arr2int16(buffer[0:2])
                 params['right_speed'] = arr2int16(buffer[2:4])
-                params['led2'] = buffer[6:9]
+                params['led1'] = buffer[6:9]
                 return params, buffer
         time.sleep(0.01)
     return params, []
@@ -365,7 +365,7 @@ class TestController(unittest.TestCase):
         # Publish a message
         pub = self.node.create_publisher(
             UInt8MultiArray,
-            'led/rgb2',
+            'led1',
             1
         )
         for _ in range(3):
@@ -377,4 +377,4 @@ class TestController(unittest.TestCase):
         self.node.destroy_publisher(pub)
         # Check what has been written to I2C
         params, _ = read_params_from_i2c()
-        self.assertTrue(all([i == 128 for i in params['led2']]))
+        self.assertTrue(all([i == 128 for i in params['led1']]))
