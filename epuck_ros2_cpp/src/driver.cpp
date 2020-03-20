@@ -187,6 +187,7 @@ public:
       mLightSensorBroadcasters[i]->sendTransform(lightTransform);
     }
 
+    // Static tf broadcaster: Range (ground sensors)
     for (int i = 0; i < 3; i++) {
       mGroundBroadcasters[i] = std::make_unique<tf2_ros::StaticTransformBroadcaster>(this);
       geometry_msgs::msg::TransformStamped groundTransform;
