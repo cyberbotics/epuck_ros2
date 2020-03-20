@@ -323,7 +323,7 @@ private:
     for (int i = 0; i < 3; i++) {
       const int16_t raw = (mI2cMain->readInt8Register(2 * i) << 8) | mI2cMain->readInt8Register(2 * i + 1);
 
-      float k = -0.016 / (1000 - 300);
+      const float k = -0.016 / (1000 - 300);
       float n = -1000 * k;
 
       auto msg = sensor_msgs::msg::Range();
