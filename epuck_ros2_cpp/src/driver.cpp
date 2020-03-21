@@ -488,7 +488,7 @@ private:
     msg.header.frame_id = "odom";
     msg.child_frame_id = "base_link";
     msg.twist.twist.linear.x = v;
-    msg.twist.twist.linear.z = omega;
+    msg.twist.twist.angular.z = omega;
     msg.pose.pose.position.x = positionX;
     msg.pose.pose.position.y = positionY;
     msg.pose.pose.orientation = euler2quaternion(0, 0, angle);
