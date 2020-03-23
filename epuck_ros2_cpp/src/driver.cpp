@@ -78,6 +78,12 @@ extern "C" {
 #define NB_GROUND_SENSORS 3
 #define NB_RGB_LEDS 4
 #define NB_BINARY_LEDS 4
+#define MSG_SENSORS_ODOMETRY_INDEX 41
+#define MSG_ACTUATORS_BIN_LEDS_INDEX 5
+#define MSG_ACTUATORS_RGB_LEDS_INDEX 6
+#define MSG_ACTUATORS_MOTORS_INDEX 0
+#define MSG_SENSORS_LIGHT_INDEX 16
+#define MSG_SENSORS_DISTANCE_INDEX 0
 
 const std::vector<std::vector<float>> INFRARED_TABLE = {{0, 4095},      {0.005, 2133.33}, {0.01, 1465.73}, {0.015, 601.46},
                                                         {0.02, 383.84}, {0.03, 234.93},   {0.04, 158.03},  {0.05, 120}};
@@ -232,14 +238,14 @@ public:
 private:
   void onLedReceived(const std_msgs::msg::Bool::SharedPtr msg, int index) {
     if (msg->data)
-      mMsgActuators[5] |= (1 << index);
+      mMsgActuators[MSG_ACTUATORS_BIN_LEDS_INDEX] |= (1 << index);
     else
-      mMsgActuators[5] &= ~(1 << index);
+      mMsgActuators[MSG_ACTUATORS_BIN_LEDS_INDEX] &= ~(1 << index);
   }
   void onRgbLedReceived(const std_msgs::msg::Int32::SharedPtr msg, int index) {
-    mMsgActuators[6 + index * 3] = ((msg->data >> 16) & 0xFF) / 2.55;
-    mMsgActuators[6 + index * 3 + 1] = ((msg->data >> 8) & 0xFF) / 2.55;
-    mMsgActuators[6 + index * 3 + 2] = (msg->data & 0xFF) / 2.55;
+    mMsgActuators[MSG_ACTUATORS_RGB_LEDS_INDEX + index * 3] = ((msg->data >> 16) & 0xFF) / 2.55;
+    mMsgActuators[MSG_ACTUATORS_RGB_LEDS_INDEX + index * 3 + 1] = ((msg->data >> 8) & 0xFF) / 2.55;
+    mMsgActuators[MSG_ACTUATORS_RGB_LEDS_INDEX + index * 3 + 2] = (msg->data & 0xFF) / 2.55;
   }
 
   void resetOdometry() {
@@ -290,10 +296,10 @@ private:
 
     RCLCPP_INFO(get_logger(), "New velocity, left %d and right %d", leftVelocityBig, rightVelocityBig);
 
-    mMsgActuators[0] = leftVelocityBig & 0xFF;
-    mMsgActuators[1] = (leftVelocityBig >> 8) & 0xFF;
-    mMsgActuators[2] = rightVelocityBig & 0xFF;
-    mMsgActuators[3] = (rightVelocityBig >> 8) & 0xFF;
+    mMsgActuators[MSG_ACTUATORS_MOTORS_INDEX + 0] = leftVelocityBig & 0xFF;
+    mMsgActuators[MSG_ACTUATORS_MOTORS_INDEX + 1] = (leftVelocityBig >> 8) & 0xFF;
+    mMsgActuators[MSG_ACTUATORS_MOTORS_INDEX + 2] = rightVelocityBig & 0xFF;
+    mMsgActuators[MSG_ACTUATORS_MOTORS_INDEX + 3] = (rightVelocityBig >> 8) & 0xFF;
   }
 
   void publishImuData() {
@@ -355,7 +361,8 @@ private:
 
   void publishIlluminanceData(rclcpp::Time &stamp) {
     for (int i = 0; i < NB_LIGHT_SENSORS; i++) {
-      const int16_t raw = (mMsgSensors[16 + i * 2] & 0x00FF) | ((mMsgSensors[16 + 1 + i * 2] << 8) & 0xFF00);
+      const int16_t raw = (mMsgSensors[MSG_SENSORS_LIGHT_INDEX + i * 2] & 0x00FF) |
+                          ((mMsgSensors[MSG_SENSORS_LIGHT_INDEX + 1 + i * 2] << 8) & 0xFF00);
 
       // Note that here we may need to calibrate the sensors since the expected
       // unit is lux
@@ -372,7 +379,8 @@ private:
     static float dist[NB_INFRARED_SENSORS];
     float distTof = OUT_OF_RANGE;
     for (int i = 0; i < NB_INFRARED_SENSORS; i++) {
-      const int distanceIntensity = mMsgSensors[i * 2] + (mMsgSensors[i * 2 + 1] << 8);
+      const int distanceIntensity =
+        mMsgSensors[MSG_SENSORS_DISTANCE_INDEX + i * 2] + (mMsgSensors[MSG_SENSORS_DISTANCE_INDEX + i * 2 + 1] << 8);
       float distance = EPuckDriver::interpolateTable((float)distanceIntensity, INFRARED_TABLE);
       dist[i] = distance;
     }
@@ -441,8 +449,10 @@ private:
   }
 
   void publishOdometryData(rclcpp::Time &stamp) {
-    const int16_t leftWheelRaw = (mMsgSensors[41] & 0x00FF) | ((mMsgSensors[42] << 8) & 0xFF00);
-    const int16_t rightWheelRaw = (mMsgSensors[43] & 0x00FF) | ((mMsgSensors[44] << 8) & 0xFF00);
+    const int16_t leftWheelRaw =
+      (mMsgSensors[MSG_SENSORS_ODOMETRY_INDEX] & 0x00FF) | ((mMsgSensors[MSG_SENSORS_ODOMETRY_INDEX + 1] << 8) & 0xFF00);
+    const int16_t rightWheelRaw =
+      (mMsgSensors[MSG_SENSORS_ODOMETRY_INDEX + 2] & 0x00FF) | ((mMsgSensors[MSG_SENSORS_ODOMETRY_INDEX + 3] << 8) & 0xFF00);
     const float samplePeriodS = (mI2cMainErrCnt + 1) * PERIOD_S;
 
     // Handle overflow
