@@ -61,6 +61,10 @@ extern "C" {
 #define ENCODER_RESOLUTION 1000.0
 #define ODOM_OVERFLOW_GRACE_TICKS 2000
 #define GROUND_SENSOR_ADDRESS 0x60
+#define INFRARED_MAX_RANGE 0.05
+#define INFRARED_MIN_RANGE 0.005
+#define GROUND_MIN_RANGE 0.0
+#define GROUND_MAX_RANGE 0.016
 
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
@@ -70,8 +74,10 @@ extern "C" {
 const float DEFAULT_WHEEL_DISTANCE = 0.05685;
 const float DEFAULT_WHEEL_RADIUS = 0.02;
 const float SENSOR_DIST_FROM_CENTER = 0.035;
+
 const std::vector<std::vector<float>> INFRARED_TABLE = {{0, 4095},      {0.005, 2133.33}, {0.01, 1465.73}, {0.015, 601.46},
                                                         {0.02, 383.84}, {0.03, 234.93},   {0.04, 158.03},  {0.05, 120}};
+const std::vector<std::vector<float>> GROUND_TABLE = {{0, 1000}, {0.016, 300}};
 const std::vector<double> DISTANCE_SENSOR_ANGLE = {
   -15 * M_PI / 180,   // ps0
   -45 * M_PI / 180,   // ps1
@@ -262,20 +268,6 @@ private:
     return result;
   }
 
-  static float intensity2distance(int pX) {
-    for (unsigned int i = 0; i < INFRARED_TABLE.size() - 1; i++) {
-      if (INFRARED_TABLE[i][1] > pX && INFRARED_TABLE[i + 1][1] <= pX) {
-        const float bX = INFRARED_TABLE[i][1];
-        const float bY = INFRARED_TABLE[i][0];
-        const float aX = INFRARED_TABLE[i + 1][1];
-        const float aY = INFRARED_TABLE[i + 1][0];
-        const float pY = ((bY - aY) / (bX - aX)) * (pX - aX) + aY;
-        return pY;
-      }
-    }
-    return OUT_OF_RANGE;
-  }
-
   static geometry_msgs::msg::Quaternion euler2quaternion(double roll, double pitch, double yaw) {
     geometry_msgs::msg::Quaternion quaternion;
     quaternion.x = sin(roll / 2) * cos(pitch / 2) * cos(yaw / 2) - cos(roll / 2) * sin(pitch / 2) * sin(yaw / 2);
@@ -318,22 +310,42 @@ private:
     mImuPublisher->publish(msg);
   }
 
+  static inline float interpolateFunction(float value, float startX, float startY, float endX, float endY) {
+    float slope = (endY - startY) / (endX - startX);
+    return slope * (value - startX) + startY;
+  }
+
+  static float interpolateTable(float value, const std::vector<std::vector<float>> &table) {
+    // Search inside two points
+    for (unsigned int i = 0; i < table.size() - 1; i++) {
+      if ((value < table[i][1] && value >= table[i + 1][1]) || (value > table[i][1] && value <= table[i + 1][1])) {
+        return EPuckPublisher::interpolateFunction(value, table[i][1], table[i][0], table[i + 1][1], table[i + 1][0]);
+      }
+    }
+
+    // Edge case, search outside of two points
+    for (unsigned int i = 0; i < table.size() - 1; i++) {
+      if ((value <= table[i][1] && value <= table[i + 1][1]) || (value > table[i][1] && value > table[i + 1][1])) {
+        return EPuckPublisher::interpolateFunction(value, table[i][1], table[i][0], table[i + 1][1], table[i + 1][0]);
+      }
+    }
+
+    return 0;
+  }
+
   void publishGroundSensorData() {
     mI2cMain->setAddress(GROUND_SENSOR_ADDRESS);
 
     for (int i = 0; i < 3; i++) {
       const int16_t raw = (mI2cMain->readInt8Register(2 * i) << 8) | mI2cMain->readInt8Register(2 * i + 1);
 
-      const float k = -0.016 / (1000 - 300);
-      float n = -1000 * k;
-
       auto msg = sensor_msgs::msg::Range();
       msg.header.stamp = now();
       msg.header.frame_id = "gs" + std::to_string(i);
       msg.radiation_type = sensor_msgs::msg::Range::INFRARED;
-      msg.min_range = 0;
-      msg.max_range = 0.016;
-      msg.range = k * raw + n;
+      msg.min_range = GROUND_MIN_RANGE;
+      msg.max_range = GROUND_MAX_RANGE;
+      msg.range = EPuckPublisher::interpolateTable((float)raw, GROUND_TABLE);
       msg.field_of_view = 15 * M_PI / 180;
       mGroundRangePublisher[i]->publish(msg);
     }
@@ -359,7 +371,7 @@ private:
     float distTof = OUT_OF_RANGE;
     for (int i = 0; i < 8; i++) {
       const int distanceIntensity = mMsgSensors[i * 2] + (mMsgSensors[i * 2 + 1] << 8);
-      float distance = EPuckPublisher::intensity2distance(distanceIntensity);
+      float distance = EPuckPublisher::interpolateTable((float)distanceIntensity, INFRARED_TABLE);
       dist[i] = distance;
     }
     if (mTofInitStatus)
@@ -373,8 +385,8 @@ private:
     msg.angle_max = 150 * M_PI / 180;
     msg.angle_increment = 15 * M_PI / 180.0;
     msg.scan_time = PERIOD_S;
-    msg.range_min = 0.005 + SENSOR_DIST_FROM_CENTER;
-    msg.range_max = 0.05 + SENSOR_DIST_FROM_CENTER;
+    msg.range_min = INFRARED_MIN_RANGE + SENSOR_DIST_FROM_CENTER;
+    msg.range_max = INFRARED_MAX_RANGE + SENSOR_DIST_FROM_CENTER;
     msg.ranges = std::vector<float>{
       dist[3] + SENSOR_DIST_FROM_CENTER,  // -150
       OUT_OF_RANGE,                       // -135
@@ -406,8 +418,8 @@ private:
       msgRange.header.stamp = stamp;
       msgRange.header.frame_id = "ps" + std::to_string(i);
       msgRange.radiation_type = sensor_msgs::msg::Range::INFRARED;
-      msgRange.min_range = 0.005;
-      msgRange.max_range = 0.05;
+      msgRange.min_range = INFRARED_MIN_RANGE;
+      msgRange.max_range = INFRARED_MAX_RANGE;
       msgRange.range = dist[i];
       msgRange.field_of_view = 15 * M_PI / 180;
       mRangePublisher[i]->publish(msgRange);
