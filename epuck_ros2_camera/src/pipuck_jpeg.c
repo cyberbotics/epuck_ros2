@@ -77,13 +77,15 @@ void pipuck_jpeg_init(pipuck_image_t *input_image, pipuck_image_t *output_image)
   status = mmal_port_format_commit(encoder->input[0]);
   assert(status == MMAL_SUCCESS);
 
-  // Configure encoder output
+  // Configure encoder output 
   mmal_format_copy(encoder->output[0]->format, encoder->input[0]->format);
-  encoder->output[0]->format->encoding = MMAL_ENCODING_JPEG;
+  encoder->output[0]->format->encoding = output_image->encoding;
   status = mmal_port_format_commit(encoder->output[0]);
   assert(status == MMAL_SUCCESS);
-  status = mmal_port_parameter_set_uint32(encoder->output[0], MMAL_PARAMETER_JPEG_Q_FACTOR, output_image->quality);
-  assert(status == MMAL_SUCCESS);
+  if (output_image->encoding == MMAL_ENCODING_JPEG) {
+    status = mmal_port_parameter_set_uint32(encoder->output[0], MMAL_PARAMETER_JPEG_Q_FACTOR, output_image->quality);
+    assert(status == MMAL_SUCCESS);
+  }
 
   // Configure buffers
   encoder->input[0]->buffer_num = encoder->input[0]->buffer_num_recommended;
