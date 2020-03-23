@@ -73,6 +73,11 @@ extern "C" {
 #define DEFAULT_WHEEL_DISTANCE 0.05685f
 #define DEFAULT_WHEEL_RADIUS 0.02f
 #define SENSOR_DIST_FROM_CENTER 0.035f
+#define NB_LIGHT_SENSORS 8
+#define NB_INFRARED_SENSORS 8
+#define NB_GROUND_SENSORS 3
+#define NB_RGB_LEDS 4
+#define NB_BINARY_LEDS 4
 
 const std::vector<std::vector<float>> INFRARED_TABLE = {{0, 4095},      {0.005, 2133.33}, {0.01, 1465.73}, {0.015, 601.46},
                                                         {0.02, 383.84}, {0.03, 234.93},   {0.04, 158.03},  {0.05, 120}};
@@ -126,21 +131,21 @@ public:
     // Create subscirbers and publishers
     mTwistSubscription = create_subscription<geometry_msgs::msg::Twist>(
       "cmd_vel", 1, std::bind(&EPuckDriver::onCmdVelReceived, this, std::placeholders::_1));
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < NB_RGB_LEDS; i++) {
       std::function<void(const std_msgs::msg::Int32::SharedPtr)> f =
         std::bind(&EPuckDriver::onRgbLedReceived, this, std::placeholders::_1, i);
       mRgbLedSubscription[i] = create_subscription<std_msgs::msg::Int32>("/led" + std::to_string(i * 2 + 1), 1, f);
     }
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < NB_BINARY_LEDS; i++) {
       std::function<void(const std_msgs::msg::Bool::SharedPtr)> f =
         std::bind(&EPuckDriver::onLedReceived, this, std::placeholders::_1, i);
       mLedSubscription[i] = create_subscription<std_msgs::msg::Bool>("/led" + std::to_string(i * 2), 1, f);
     }
     mLaserPublisher = create_publisher<sensor_msgs::msg::LaserScan>("scan", 1);
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < NB_GROUND_SENSORS; i++)
       mGroundRangePublisher[i] = create_publisher<sensor_msgs::msg::Range>("/gs" + std::to_string(i), 1);
     mOdometryPublisher = create_publisher<nav_msgs::msg::Odometry>("odom", 1);
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < NB_INFRARED_SENSORS; i++) {
       mRangePublisher[i] = create_publisher<sensor_msgs::msg::Range>("ps" + std::to_string(i), 1);
       mIlluminancePublisher[i] = create_publisher<sensor_msgs::msg::Illuminance>("ls" + std::to_string(i), 1);
     }
@@ -166,7 +171,7 @@ public:
     laserTransform.transform.translation.z = 0;
     mLaserBroadcaster->sendTransform(laserTransform);
 
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < NB_INFRARED_SENSORS; i++) {
       // Static tf broadcaster: Range (infrared)
       mInfraredBroadcasters[i] = std::make_unique<tf2_ros::StaticTransformBroadcaster>(this);
       geometry_msgs::msg::TransformStamped infraredTransform;
@@ -193,7 +198,7 @@ public:
     }
 
     // Static tf broadcaster: Range (ground sensors)
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < NB_GROUND_SENSORS; i++) {
       mGroundBroadcasters[i] = std::make_unique<tf2_ros::StaticTransformBroadcaster>(this);
       geometry_msgs::msg::TransformStamped groundTransform;
       groundTransform.header.stamp = now();
@@ -207,7 +212,7 @@ public:
     }
 
     // Static tf broadcaster: Range (ToF)
-    mInfraredBroadcasters[8] = std::make_unique<tf2_ros::StaticTransformBroadcaster>(this);
+    mTofBroadcasters = std::make_unique<tf2_ros::StaticTransformBroadcaster>(this);
     geometry_msgs::msg::TransformStamped infraredTransform;
     infraredTransform.header.stamp = now();
     infraredTransform.header.frame_id = "base_link";
@@ -216,7 +221,7 @@ public:
     infraredTransform.transform.translation.x = SENSOR_DIST_FROM_CENTER;
     infraredTransform.transform.translation.y = 0;
     infraredTransform.transform.translation.z = 0;
-    mInfraredBroadcasters[8]->sendTransform(infraredTransform);
+    mTofBroadcasters->sendTransform(infraredTransform);
 
     RCLCPP_INFO(get_logger(), "EPuck Driver has been initialized");
     RCLCPP_INFO(get_logger(), "Driver mode: %s", type.c_str());
@@ -333,7 +338,7 @@ private:
   void publishGroundSensorData() {
     mI2cMain->setAddress(GROUND_SENSOR_ADDRESS);
 
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < NB_GROUND_SENSORS; i++) {
       const int16_t raw = (mI2cMain->readInt8Register(2 * i) << 8) | mI2cMain->readInt8Register(2 * i + 1);
 
       auto msg = sensor_msgs::msg::Range();
@@ -349,7 +354,7 @@ private:
   }
 
   void publishIlluminanceData(rclcpp::Time &stamp) {
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < NB_LIGHT_SENSORS; i++) {
       const int16_t raw = (mMsgSensors[16 + i * 2] & 0x00FF) | ((mMsgSensors[16 + 1 + i * 2] << 8) & 0xFF00);
 
       // Note that here we may need to calibrate the sensors since the expected
@@ -364,15 +369,15 @@ private:
 
   void publishDistanceData(rclcpp::Time &stamp) {
     // Decode measurements
-    float dist[8];
+    static float dist[NB_INFRARED_SENSORS];
     float distTof = OUT_OF_RANGE;
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < NB_INFRARED_SENSORS; i++) {
       const int distanceIntensity = mMsgSensors[i * 2] + (mMsgSensors[i * 2 + 1] << 8);
       float distance = EPuckDriver::interpolateTable((float)distanceIntensity, INFRARED_TABLE);
       dist[i] = distance;
     }
     if (mTofInitStatus)
-      distTof = tofReadDistance() / 1000.0;
+      distTof = tofReadDistance() / 1000.0f;
 
     // Create LaserScan message
     auto msg = sensor_msgs::msg::LaserScan();
@@ -410,7 +415,7 @@ private:
     mLaserPublisher->publish(msg);
 
     // Create Range messages
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < NB_INFRARED_SENSORS; i++) {
       auto msgRange = sensor_msgs::msg::Range();
       msgRange.header.stamp = stamp;
       msgRange.header.frame_id = "ps" + std::to_string(i);
@@ -566,21 +571,22 @@ private:
 
   rclcpp::TimerBase::SharedPtr mTimer;
   rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr mImuPublisher;
-  rclcpp::Publisher<sensor_msgs::msg::Illuminance>::SharedPtr mIlluminancePublisher[8];
+  rclcpp::Publisher<sensor_msgs::msg::Illuminance>::SharedPtr mIlluminancePublisher[NB_LIGHT_SENSORS];
   rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr mLaserPublisher;
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr mOdometryPublisher;
-  rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr mRangePublisher[8];
-  rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr mGroundRangePublisher[3];
+  rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr mRangePublisher[NB_INFRARED_SENSORS];
+  rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr mGroundRangePublisher[NB_GROUND_SENSORS];
   rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr mRangeTofPublisher;
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr mTwistSubscription;
-  rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr mRgbLedSubscription[4];
-  rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr mLedSubscription[4];
+  rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr mRgbLedSubscription[NB_RGB_LEDS];
+  rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr mLedSubscription[NB_BINARY_LEDS];
 
   std::unique_ptr<tf2_ros::StaticTransformBroadcaster> mLaserBroadcaster;
   std::unique_ptr<tf2_ros::TransformBroadcaster> mDynamicBroadcaster;
-  std::unique_ptr<tf2_ros::StaticTransformBroadcaster> mGroundBroadcasters[3];
-  std::unique_ptr<tf2_ros::StaticTransformBroadcaster> mInfraredBroadcasters[9];
-  std::unique_ptr<tf2_ros::StaticTransformBroadcaster> mLightSensorBroadcasters[8];
+  std::unique_ptr<tf2_ros::StaticTransformBroadcaster> mGroundBroadcasters[NB_GROUND_SENSORS];
+  std::unique_ptr<tf2_ros::StaticTransformBroadcaster> mInfraredBroadcasters[NB_INFRARED_SENSORS];
+  std::unique_ptr<tf2_ros::StaticTransformBroadcaster> mTofBroadcasters;
+  std::unique_ptr<tf2_ros::StaticTransformBroadcaster> mLightSensorBroadcasters[NB_INFRARED_SENSORS];
 
   std::shared_ptr<I2CWrapper> mI2cMain;
   std::shared_ptr<MPU9250> mImu;
