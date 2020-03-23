@@ -32,6 +32,23 @@ public:
   virtual int setAddress(int address) = 0;
   virtual int readData(char *buffer, int size) = 0;
   virtual int writeData(char *buffer, int size) = 0;
+
+  char readInt8Register(char reg) {
+    int status;
+    char byte;
+
+    for (int i = 0; i < mMaxRetryCount; i++) {
+      status = (this->writeData(&reg, 1) != 1);
+      status ^= (this->readData(&byte, 1) != 1);
+
+      if (!status)
+        return byte;
+    }
+    return 0;
+  }
+
+protected:
+  int mMaxRetryCount = 3;
 };
 
 class I2CWrapperTest : public I2CWrapper {

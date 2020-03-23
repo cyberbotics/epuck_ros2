@@ -23,6 +23,7 @@ import launch_ros.actions
 import launch_testing.actions
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Range, LaserScan, Imu
+from std_msgs.msg import Int32
 from nav_msgs.msg import Odometry
 from rcl_interfaces.srv import SetParameters
 from rclpy.parameter import ParameterType, ParameterValue
@@ -63,6 +64,7 @@ def read_params_from_i2c(idx=4, address=0x1F):
             if len(buffer) > 0:
                 params['left_speed'] = arr2int16(buffer[0:2])
                 params['right_speed'] = arr2int16(buffer[2:4])
+                params['led1'] = buffer[6:9]
                 return params, buffer
         time.sleep(0.01)
     return params, []
@@ -358,3 +360,21 @@ class TestController(unittest.TestCase):
         )
         self.assertTrue(
             condition, 'IMU should publish value greater than 1m/s^2')
+
+    def test_rgb(self, launch_service, proc_output):
+        # Publish a message
+        pub = self.node.create_publisher(
+            Int32,
+            'led1',
+            1
+        )
+        for _ in range(3):
+            msg = Int32()
+            msg.data = 0xFFFFFF
+            pub.publish(msg)
+            time.sleep(0.1)
+
+        self.node.destroy_publisher(pub)
+        # Check what has been written to I2C
+        params, _ = read_params_from_i2c()
+        self.assertTrue(all([i == 100 for i in params['led1']]))
