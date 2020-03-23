@@ -53,27 +53,26 @@ extern "C" {
 #include "tf2_ros/static_transform_broadcaster.h"
 #include "tf2_ros/transform_broadcaster.h"
 
-#define MSG_ACTUATORS_SIZE 20
-#define MSG_SENSORS_SIZE 47
-#define PERIOD_MS 64
-#define PERIOD_S (PERIOD_MS / 1000.0)
-#define OUT_OF_RANGE 0
-#define ENCODER_RESOLUTION 1000.0
-#define ODOM_OVERFLOW_GRACE_TICKS 2000
-#define GROUND_SENSOR_ADDRESS 0x60
-#define INFRARED_MAX_RANGE 0.05
-#define INFRARED_MIN_RANGE 0.005
-#define GROUND_MIN_RANGE 0.0
-#define GROUND_MAX_RANGE 0.016
-
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 #define CLIP(VAL, MIN_VAL, MAX_VAL) MAX(MIN((MAX_VAL), (VAL)), (MIN_VAL))
 #define POW2(N) (1 << (N))
 
-const float DEFAULT_WHEEL_DISTANCE = 0.05685;
-const float DEFAULT_WHEEL_RADIUS = 0.02;
-const float SENSOR_DIST_FROM_CENTER = 0.035;
+#define MSG_ACTUATORS_SIZE 20
+#define MSG_SENSORS_SIZE 47
+#define PERIOD_MS 64
+#define PERIOD_S (PERIOD_MS / 1000.0f)
+#define OUT_OF_RANGE 0.0f
+#define ENCODER_RESOLUTION 1000.0f
+#define ODOM_OVERFLOW_GRACE_TICKS 2000
+#define GROUND_SENSOR_ADDRESS 0x60
+#define INFRARED_MAX_RANGE 0.05f
+#define INFRARED_MIN_RANGE 0.005f
+#define GROUND_MIN_RANGE 0.0f
+#define GROUND_MAX_RANGE 0.016f
+#define DEFAULT_WHEEL_DISTANCE 0.05685f
+#define DEFAULT_WHEEL_RADIUS 0.02f
+#define SENSOR_DIST_FROM_CENTER 0.035f
 
 const std::vector<std::vector<float>> INFRARED_TABLE = {{0, 4095},      {0.005, 2133.33}, {0.01, 1465.73}, {0.015, 601.46},
                                                         {0.02, 383.84}, {0.03, 234.93},   {0.04, 158.03},  {0.05, 120}};
@@ -90,9 +89,9 @@ const std::vector<double> DISTANCE_SENSOR_ANGLE = {
   0 * M_PI / 180      // tof
 };
 
-class EPuckPublisher : public rclcpp::Node {
+class EPuckDriver : public rclcpp::Node {
 public:
-  EPuckPublisher(int argc, char *argv[]) : Node("pipuck_driver") {
+  EPuckDriver(int argc, char *argv[]) : Node("epuck_driver") {
     // Parse arguments
     std::string type = "hw";
     for (int i = 1; i < argc; i++) {
@@ -105,7 +104,7 @@ public:
     mWheelDistance = declare_parameter<float>("wheel_distance", DEFAULT_WHEEL_DISTANCE);
     mWheelRadius = declare_parameter<float>("wheel_radius", DEFAULT_WHEEL_RADIUS);
     mCallbackHandler =
-      add_on_set_parameters_callback(std::bind(&EPuckPublisher::paramChangeCallback, this, std::placeholders::_1));
+      add_on_set_parameters_callback(std::bind(&EPuckDriver::paramChangeCallback, this, std::placeholders::_1));
 
     // Create I2C object
     if (type == "test")
@@ -126,15 +125,15 @@ public:
 
     // Create subscirbers and publishers
     mTwistSubscription = create_subscription<geometry_msgs::msg::Twist>(
-      "cmd_vel", 1, std::bind(&EPuckPublisher::onCmdVelReceived, this, std::placeholders::_1));
+      "cmd_vel", 1, std::bind(&EPuckDriver::onCmdVelReceived, this, std::placeholders::_1));
     for (int i = 0; i < 4; i++) {
       std::function<void(const std_msgs::msg::Int32::SharedPtr)> f =
-        std::bind(&EPuckPublisher::onRgbLedReceived, this, std::placeholders::_1, i);
+        std::bind(&EPuckDriver::onRgbLedReceived, this, std::placeholders::_1, i);
       mRgbLedSubscription[i] = create_subscription<std_msgs::msg::Int32>("/led" + std::to_string(i * 2 + 1), 1, f);
     }
     for (int i = 0; i < 4; i++) {
       std::function<void(const std_msgs::msg::Bool::SharedPtr)> f =
-        std::bind(&EPuckPublisher::onLedReceived, this, std::placeholders::_1, i);
+        std::bind(&EPuckDriver::onLedReceived, this, std::placeholders::_1, i);
       mLedSubscription[i] = create_subscription<std_msgs::msg::Bool>("/led" + std::to_string(i * 2), 1, f);
     }
     mLaserPublisher = create_publisher<sensor_msgs::msg::LaserScan>("scan", 1);
@@ -147,7 +146,7 @@ public:
     }
     mRangeTofPublisher = create_publisher<sensor_msgs::msg::Range>("tof", 1);
     mImuPublisher = create_publisher<sensor_msgs::msg::Imu>("imu", 1);
-    mTimer = create_wall_timer(std::chrono::milliseconds(PERIOD_MS), std::bind(&EPuckPublisher::updateCallback, this));
+    mTimer = create_wall_timer(std::chrono::milliseconds(PERIOD_MS), std::bind(&EPuckDriver::updateCallback, this));
 
     // Dynamic tf broadcaster: Odometry
     mDynamicBroadcaster = std::make_unique<tf2_ros::TransformBroadcaster>(this);
@@ -174,7 +173,7 @@ public:
       infraredTransform.header.stamp = now();
       infraredTransform.header.frame_id = "base_link";
       infraredTransform.child_frame_id = "ps" + std::to_string(i);
-      infraredTransform.transform.rotation = EPuckPublisher::euler2quaternion(0, 0, DISTANCE_SENSOR_ANGLE[i]);
+      infraredTransform.transform.rotation = EPuckDriver::euler2quaternion(0, 0, DISTANCE_SENSOR_ANGLE[i]);
       infraredTransform.transform.translation.x = SENSOR_DIST_FROM_CENTER * cos(DISTANCE_SENSOR_ANGLE[i]);
       infraredTransform.transform.translation.y = SENSOR_DIST_FROM_CENTER * sin(DISTANCE_SENSOR_ANGLE[i]);
       infraredTransform.transform.translation.z = 0;
@@ -186,7 +185,7 @@ public:
       lightTransform.header.stamp = now();
       lightTransform.header.frame_id = "base_link";
       lightTransform.child_frame_id = "ls" + std::to_string(i);
-      lightTransform.transform.rotation = EPuckPublisher::euler2quaternion(0, 0, DISTANCE_SENSOR_ANGLE[i]);
+      lightTransform.transform.rotation = EPuckDriver::euler2quaternion(0, 0, DISTANCE_SENSOR_ANGLE[i]);
       lightTransform.transform.translation.x = SENSOR_DIST_FROM_CENTER * cos(DISTANCE_SENSOR_ANGLE[i]);
       lightTransform.transform.translation.y = SENSOR_DIST_FROM_CENTER * sin(DISTANCE_SENSOR_ANGLE[i]);
       lightTransform.transform.translation.z = 0;
@@ -200,7 +199,7 @@ public:
       groundTransform.header.stamp = now();
       groundTransform.header.frame_id = "base_link";
       groundTransform.child_frame_id = "gs" + std::to_string(i);
-      groundTransform.transform.rotation = EPuckPublisher::euler2quaternion(0, 0, DISTANCE_SENSOR_ANGLE[i]);
+      groundTransform.transform.rotation = EPuckDriver::euler2quaternion(0, 0, DISTANCE_SENSOR_ANGLE[i]);
       groundTransform.transform.translation.x = SENSOR_DIST_FROM_CENTER - 0.005;
       groundTransform.transform.translation.y = 0.009 - i * 0.009;
       groundTransform.transform.translation.z = 0;
@@ -213,7 +212,7 @@ public:
     infraredTransform.header.stamp = now();
     infraredTransform.header.frame_id = "base_link";
     infraredTransform.child_frame_id = "tof";
-    infraredTransform.transform.rotation = EPuckPublisher::euler2quaternion(0, 0, 0);
+    infraredTransform.transform.rotation = EPuckDriver::euler2quaternion(0, 0, 0);
     infraredTransform.transform.translation.x = SENSOR_DIST_FROM_CENTER;
     infraredTransform.transform.translation.y = 0;
     infraredTransform.transform.translation.z = 0;
@@ -223,7 +222,7 @@ public:
     RCLCPP_INFO(get_logger(), "Driver mode: %s", type.c_str());
   }
 
-  ~EPuckPublisher() { close(mFile); }
+  ~EPuckDriver() { close(mFile); }
 
 private:
   void onLedReceived(const std_msgs::msg::Bool::SharedPtr msg, int index) {
@@ -318,16 +317,14 @@ private:
   static float interpolateTable(float value, const std::vector<std::vector<float>> &table) {
     // Search inside two points
     for (unsigned int i = 0; i < table.size() - 1; i++) {
-      if ((value < table[i][1] && value >= table[i + 1][1]) || (value > table[i][1] && value <= table[i + 1][1])) {
-        return EPuckPublisher::interpolateFunction(value, table[i][1], table[i][0], table[i + 1][1], table[i + 1][0]);
-      }
+      if ((value < table[i][1] && value >= table[i + 1][1]) || (value > table[i][1] && value <= table[i + 1][1]))
+        return EPuckDriver::interpolateFunction(value, table[i][1], table[i][0], table[i + 1][1], table[i + 1][0]);
     }
 
     // Edge case, search outside of two points
     for (unsigned int i = 0; i < table.size() - 1; i++) {
-      if ((value <= table[i][1] && value <= table[i + 1][1]) || (value > table[i][1] && value > table[i + 1][1])) {
-        return EPuckPublisher::interpolateFunction(value, table[i][1], table[i][0], table[i + 1][1], table[i + 1][0]);
-      }
+      if ((value <= table[i][1] && value <= table[i + 1][1]) || (value > table[i][1] && value > table[i + 1][1]))
+        return EPuckDriver::interpolateFunction(value, table[i][1], table[i][0], table[i + 1][1], table[i + 1][0]);
     }
 
     return 0;
@@ -345,7 +342,7 @@ private:
       msg.radiation_type = sensor_msgs::msg::Range::INFRARED;
       msg.min_range = GROUND_MIN_RANGE;
       msg.max_range = GROUND_MAX_RANGE;
-      msg.range = EPuckPublisher::interpolateTable((float)raw, GROUND_TABLE);
+      msg.range = EPuckDriver::interpolateTable((float)raw, GROUND_TABLE);
       msg.field_of_view = 15 * M_PI / 180;
       mGroundRangePublisher[i]->publish(msg);
     }
@@ -371,7 +368,7 @@ private:
     float distTof = OUT_OF_RANGE;
     for (int i = 0; i < 8; i++) {
       const int distanceIntensity = mMsgSensors[i * 2] + (mMsgSensors[i * 2 + 1] << 8);
-      float distance = EPuckPublisher::interpolateTable((float)distanceIntensity, INFRARED_TABLE);
+      float distance = EPuckDriver::interpolateTable((float)distanceIntensity, INFRARED_TABLE);
       dist[i] = distance;
     }
     if (mTofInitStatus)
@@ -609,7 +606,7 @@ private:
 
 int main(int argc, char *argv[]) {
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<EPuckPublisher>(argc, argv));
+  rclcpp::spin(std::make_shared<EPuckDriver>(argc, argv));
   rclcpp::shutdown();
   return 0;
 }
