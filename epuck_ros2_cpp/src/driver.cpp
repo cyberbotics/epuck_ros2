@@ -66,8 +66,10 @@ extern "C" {
 #define ENCODER_RESOLUTION 1000.0f
 #define ODOM_OVERFLOW_GRACE_TICKS 2000
 #define GROUND_SENSOR_ADDRESS 0x60
-#define INFRARED_MAX_RANGE 0.05f
-#define INFRARED_MIN_RANGE 0.005f
+#define INFRARED_MAX_RANGE 0.04f
+#define INFRARED_MIN_RANGE 0.009f
+#define TOF_MAX_RANGE 1.0f
+#define TOF_MIN_RANGE 0.005f
 #define GROUND_MIN_RANGE 0.0f
 #define GROUND_MAX_RANGE 0.016f
 #define DEFAULT_WHEEL_DISTANCE 0.05685f
@@ -332,13 +334,15 @@ private:
         return EPuckDriver::interpolateFunction(value, table[i][1], table[i][0], table[i + 1][1], table[i + 1][0]);
     }
 
-    // Edge case, search outside of two points
-    for (unsigned int i = 0; i < table.size() - 1; i++) {
-      if ((value <= table[i][1] && value <= table[i + 1][1]) || (value > table[i][1] && value > table[i + 1][1]))
-        return EPuckDriver::interpolateFunction(value, table[i][1], table[i][0], table[i + 1][1], table[i + 1][0]);
-    }
-
-    return 0;
+    // Edge case, search outside of two points.
+    // This code assumes that the table is sorted in descending order
+    if (value > table[0][1])
+      // Interpolate as first
+      return EPuckDriver::interpolateFunction(value, table[0][1], table[0][0], table[1][1], table[1][0]);
+    else
+      // Interpolate as last
+      return EPuckDriver::interpolateFunction(value, table[table.size() - 2][1], table[table.size() - 2][0],
+                                              table[table.size() - 1][1], table[table.size() - 1][0]);
   }
 
   void publishGroundSensorData() {
@@ -439,8 +443,8 @@ private:
       msgRange.header.stamp = stamp;
       msgRange.header.frame_id = "tof";
       msgRange.radiation_type = sensor_msgs::msg::Range::INFRARED;
-      msgRange.min_range = 0.005;
-      msgRange.max_range = 2.0;
+      msgRange.min_range = TOF_MIN_RANGE;
+      msgRange.max_range = TOF_MAX_RANGE;
       msgRange.range = distTof;
       // Reference: https://forum.pololu.com/t/vl53l0x-beam-width-angle/11483/2
       msgRange.field_of_view = 25 * M_PI / 180;
