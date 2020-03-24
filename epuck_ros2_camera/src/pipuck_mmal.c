@@ -50,7 +50,7 @@ void pipuck_mmal_create(pipuck_mmal_t *pipuck_mmal) {
   // Set defaults
   input_image->width = 640;
   input_image->height = 480;
-  input_image->size = input_image->width * input_image->height * 3;
+  input_image->size = input_image->width * input_image->height * 2;
   input_image->encoding = MMAL_ENCODING_YUYV;
   output_image->width = 640;
   output_image->height = 480;
@@ -178,4 +178,6 @@ int pipuck_mmal_convert(pipuck_mmal_t *pipuck_mmal) {
       assert(status == MMAL_SUCCESS);
     }
   }
+
+  return 0;
 }

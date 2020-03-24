@@ -36,13 +36,14 @@ public:
     // MMAL JPEG
     pipuck_mmal_create(&mPipuckMmalJpeg);
     strcpy(mPipuckMmalJpeg.component, "vc.ril.image_encode");
-    mPipuckMmalJpeg.output.data = mJpegImageBuffer;
+    mPipuckMmalJpeg.output.data = mImageBuffer;
+    mPipuckMmalJpeg.output.quality = quality;
     mPipuckMmalJpeg.output.encoding = MMAL_ENCODING_JPEG;
 
     // MMAL RGB
     pipuck_mmal_create(&mPipuckMmalRgb);
     strcpy(mPipuckMmalRgb.component, "vc.ril.isp");
-    mPipuckMmalRgb.output.data = mRgbImageBuffer;
+    mPipuckMmalRgb.output.data = mImageBuffer;
     mPipuckMmalRgb.output.encoding = MMAL_ENCODING_RGB24;
 
     // Prepare ROS topics
@@ -93,7 +94,7 @@ private:
       return;
     }
 
-        // Publish RAW RGB image if needed
+    // Publish RAW RGB image if needed
     if (mPublisherRaw->get_subscription_count() > 0) {
       initRgb();
 
@@ -106,8 +107,8 @@ private:
       message.is_bigendian = false;
       message.header.stamp = now();
       message.header.frame_id = "pipuck_image_raw";
-      message.data.assign(mPipuckMmalRgb.output.data,
-                          mPipuckMmalRgb.output.data + mPipuckMmalRgb.output.height * mPipuckMmalRgb.output.width * 3);
+      message.data.assign(mPipuckMmalRgb.output.data, mPipuckMmalRgb.output.data + mPipuckMmalRgb.output.size);
+      mPublisherRaw->publish(message);
     } else
       deinitRgb();
 
@@ -117,6 +118,8 @@ private:
 
       // It's the same data for both topics
       mPipuckMmalJpeg.input.data = mPipuckMmalRgb.input.data;
+      mPipuckMmalJpeg.input.size = mPipuckMmalRgb.input.size;
+
       pipuck_mmal_convert(&mPipuckMmalJpeg);
       auto message = sensor_msgs::msg::CompressedImage();
       message.format = "jpeg";
@@ -182,8 +185,7 @@ private:
   rclcpp::Publisher<sensor_msgs::msg::CompressedImage>::SharedPtr mPublisherCompressed;
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr mPublisherRaw;
   OnSetParametersCallbackHandle::SharedPtr mCallbackHandler;
-  char mJpegImageBuffer[900 * 1024];
-  char mRgbImageBuffer[640 * 480 * 3 + 1000];
+  char mImageBuffer[900 * 1024];
   bool mV4l2Initialized;
   bool mJpegInitialized;
   bool mRgbInitialized;
