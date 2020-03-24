@@ -21,7 +21,7 @@
 
 extern "C" {
 #include "epuck_ros2_camera/pipuck_image.h"
-#include "epuck_ros2_camera/pipuck_jpeg.h"
+#include "epuck_ros2_camera/pipuck_mmal.h"
 #include "epuck_ros2_camera/pipuck_ov7670.h"
 #include "epuck_ros2_camera/pipuck_v4l2.h"
 }

@@ -3,6 +3,7 @@
 *.rgb24
 *.yuv422
 v4l2_to_rgb24
+cv_to_jpeg
 CMakeFiles
 cmake_install.cmake
 CMakeCache.txt

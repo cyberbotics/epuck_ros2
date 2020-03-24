@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MMAL_JPEG_H
-#define MMAL_JPEG_H
+#ifndef _PIPUCK_MMAL_H_
+#define _PIPUCK_MMAL_H_
 
 #include "epuck_ros2_camera/pipuck_image.h"
 

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "epuck_ros2_camera/pipuck_jpeg.h"
+#include "epuck_ros2_camera/pipuck_mmal.h"
 
 #include <assert.h>
 #include <bcm_host.h>
