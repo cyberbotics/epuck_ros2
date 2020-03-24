@@ -21,43 +21,43 @@
 
 extern "C" {
 #include "epuck_ros2_camera/pipuck_image.h"
-#include "epuck_ros2_camera/pipuck_jpeg.h"
+#include "epuck_ros2_camera/pipuck_mmal.h"
 #include "epuck_ros2_camera/pipuck_ov7670.h"
 #include "epuck_ros2_camera/pipuck_v4l2.h"
 }
 
-enum CameraMode { CAMERA_MODE_NONE = 0, CAMERA_MODE_RAW_RGB, CAMERA_MODE_COMPRESSED_JPEG };
-
 class CameraPublisher : public rclcpp::Node {
 public:
-  CameraPublisher() : Node("camera_publisher"), mMode(CAMERA_MODE_NONE) {
+  CameraPublisher() : Node("epuck_ros2_camera"), mV4l2Initialized(false), mJpegInitialized(false), mRgbInitialized(false) {
     // Add parameters
     auto quality = declare_parameter<int>("quality", 8);
     auto interval = declare_parameter<int>("interval", 80);
 
-    // Configure input/output formats
-    pipuck_image_init(&mCapturedImage);
-    pipuck_image_init(&mCompressedImage);
-    mCompressedImage.quality = quality;
-    mCompressedImage.data = mImageBuffer;
-    mRgbEncodedImage.data = mRgbImageBuffer;
-    mCompressedImage.encoding = PIPUCK_IMAGE_ENCODING_JPEG;
-    mRgbEncodedImage.encoding = PIPUCK_IMAGE_ENCODING_RGB24;
-    mCapturedImage.encoding = PIPUCK_IMAGE_ENCODING_YUYV;
+    // MMAL JPEG
+    pipuck_mmal_create(&mPipuckMmalJpeg);
+    strcpy(mPipuckMmalJpeg.component, "vc.ril.image_encode");
+    mPipuckMmalJpeg.output.data = mJpegImageBuffer;
+    mPipuckMmalJpeg.output.encoding = MMAL_ENCODING_JPEG;
+
+    // MMAL RGB
+    pipuck_mmal_create(&mPipuckMmalRgb);
+    strcpy(mPipuckMmalRgb.component, "vc.ril.isp");
+    mPipuckMmalRgb.output.data = mRgbImageBuffer;
+    mPipuckMmalRgb.output.encoding = MMAL_ENCODING_RGB24;
 
     // Prepare ROS topics
     mCallbackHandler =
       this->add_on_set_parameters_callback(std::bind(&CameraPublisher::param_change_callback, this, std::placeholders::_1));
     mPublisherCompressed = this->create_publisher<sensor_msgs::msg::CompressedImage>("image_raw/compressed", 0);
     mPublisherRaw = this->create_publisher<sensor_msgs::msg::Image>("image_raw", 0);
-    mTimer = this->create_wall_timer(std::chrono::milliseconds(interval), std::bind(&CameraPublisher::timer_callback, this));
+    mTimer = this->create_wall_timer(std::chrono::milliseconds(interval), std::bind(&CameraPublisher::timerCallback, this));
+    RCLCPP_INFO(this->get_logger(), "E-puck2 camera is ready");
   }
 
   ~CameraPublisher() {
-    if (mMode == CAMERA_MODE_RAW_RGB || mMode == CAMERA_MODE_COMPRESSED_JPEG) {
-      pipuck_v4l2_deinit();
-      pipuck_jpeg_deinit();
-    }
+    deinitV4l2();
+    deinitRgb();
+    deinitJpeg();
   }
 
 private:
@@ -67,14 +67,13 @@ private:
 
     for (auto parameter : parameters) {
       if (parameter.get_name() == "quality") {
-        setMode(CAMERA_MODE_NONE);
-        mCompressedImage.quality = parameter.as_int();
-        setMode(CAMERA_MODE_COMPRESSED_JPEG);
-
+        deinitJpeg();
+        mPipuckMmalJpeg.output.quality = parameter.as_int();
+        initJpeg();
       } else if (parameter.get_name() == "interval") {
         mTimer->cancel();
         mTimer = this->create_wall_timer(std::chrono::milliseconds(parameter.as_int()),
-                                         std::bind(&CameraPublisher::timer_callback, this));
+                                         std::bind(&CameraPublisher::timerCallback, this));
       }
 
       RCLCPP_INFO(this->get_logger(), "Parameter '%s' has changed to %s", parameter.get_name().c_str(),
@@ -84,77 +83,112 @@ private:
     return result;
   }
 
-  void setMode(CameraMode mode) {
-    // Check if it is different
-    if (mode == mMode)
+  void timerCallback() {
+    // Initialize V4L2 if needed
+    if (mPublisherCompressed->get_subscription_count() > 0 || mPublisherRaw->get_subscription_count()) {
+      initV4l2();
+      pipuck_v4l2_capture(&(mPipuckMmalRgb.input));
+    } else {
+      deinitV4l2();
       return;
-
-    // Deinit if previous mode required GPU
-    pipuck_jpeg_deinit();
-    pipuck_v4l2_deinit();
-
-    // Init new configuration
-    if (mMode == CAMERA_MODE_RAW_RGB) {
-      pipuck_ov7670_init();
-      pipuck_v4l2_init();
-      pipuck_jpeg_init(&mCapturedImage, &mRgbEncodedImage);
-    } else if (mMode == CAMERA_MODE_COMPRESSED_JPEG) {
-      pipuck_ov7670_init();
-      pipuck_v4l2_init();
-      pipuck_jpeg_init(&mCapturedImage, &mCompressedImage);
     }
 
-    mMode = mode;
-  }
+        // Publish RAW RGB image if needed
+    if (mPublisherRaw->get_subscription_count() > 0) {
+      initRgb();
 
-  void timer_callback() {
-    // Set mode
-    if (mPublisherCompressed->get_subscription_count() > 0)
-      setMode(CAMERA_MODE_COMPRESSED_JPEG);
-    else if (mPublisherRaw->get_subscription_count() > 0)
-      setMode(CAMERA_MODE_RAW_RGB);
-    else
-      setMode(CAMERA_MODE_NONE);
-
-    // Publish image
-    if (mMode == CAMERA_MODE_RAW_RGB) {
-      pipuck_v4l2_capture(&mCapturedImage);
-      pipuck_jpeg_encode(&mCapturedImage, &mRgbEncodedImage);
-
+      pipuck_mmal_convert(&mPipuckMmalRgb);
       auto message = sensor_msgs::msg::Image();
       message.encoding = "rgb8";
-      message.width = mCapturedImage.width;
-      message.height = mCapturedImage.height;
-      message.step = mCapturedImage.width * 3;
+      message.width = mPipuckMmalRgb.output.width;
+      message.height = mPipuckMmalRgb.output.height;
+      message.step = mPipuckMmalRgb.output.width * 3;
       message.is_bigendian = false;
       message.header.stamp = now();
       message.header.frame_id = "pipuck_image_raw";
-      message.data.assign(mRgbEncodedImage.data, mRgbEncodedImage.data + mCapturedImage.height * mCapturedImage.width * 3);
-    } else if (mMode == CAMERA_MODE_COMPRESSED_JPEG) {
-      pipuck_v4l2_capture(&mCapturedImage);
-      pipuck_jpeg_encode(&mCapturedImage, &mCompressedImage);
+      message.data.assign(mPipuckMmalRgb.output.data,
+                          mPipuckMmalRgb.output.data + mPipuckMmalRgb.output.height * mPipuckMmalRgb.output.width * 3);
+    } else
+      deinitRgb();
 
+    // Publish JPEG compressed image if needed
+    if (mPublisherCompressed->get_subscription_count() > 0) {
+      initJpeg();
+
+      // It's the same data for both topics
+      mPipuckMmalJpeg.input.data = mPipuckMmalRgb.input.data;
+      pipuck_mmal_convert(&mPipuckMmalJpeg);
       auto message = sensor_msgs::msg::CompressedImage();
       message.format = "jpeg";
       message.header.stamp = now();
       message.header.frame_id = "pipuck_image_compressed";
-      message.data.assign(mCompressedImage.data, mCompressedImage.data + mCompressedImage.size);
-
+      message.data.assign(mPipuckMmalJpeg.output.data, mPipuckMmalJpeg.output.data + mPipuckMmalJpeg.output.size);
       mPublisherCompressed->publish(message);
+    } else
+      deinitJpeg();
+  }
+
+  void initV4l2() {
+    if (!mV4l2Initialized) {
+      pipuck_v4l2_init();
+      mV4l2Initialized = true;
+      RCLCPP_INFO(this->get_logger(), "V4L2 component initialized");
     }
   }
+
+  void deinitV4l2() {
+    if (mV4l2Initialized) {
+      pipuck_v4l2_deinit();
+      mV4l2Initialized = false;
+      RCLCPP_INFO(this->get_logger(), "V4L2 component deinitialized");
+      deinitJpeg();
+      deinitRgb();
+    }
+  }
+
+  void deinitJpeg() {
+    if (mJpegInitialized) {
+      pipuck_mmal_deinit(&mPipuckMmalJpeg);
+      mJpegInitialized = false;
+      RCLCPP_INFO(this->get_logger(), "MMAL JPEG component deinitialized");
+    }
+  }
+
+  void initJpeg() {
+    if (!mJpegInitialized) {
+      pipuck_mmal_init(&mPipuckMmalJpeg);
+      mJpegInitialized = true;
+      RCLCPP_INFO(this->get_logger(), "MMAL JPEG component initialized");
+    }
+  }
+
+  void deinitRgb() {
+    if (mRgbInitialized) {
+      pipuck_mmal_deinit(&mPipuckMmalRgb);
+      mRgbInitialized = false;
+      RCLCPP_INFO(this->get_logger(), "MMAL RGB component deinitialized");
+    }
+  }
+
+  void initRgb() {
+    if (!mRgbInitialized) {
+      pipuck_mmal_init(&mPipuckMmalRgb);
+      mRgbInitialized = true;
+      RCLCPP_INFO(this->get_logger(), "MMAL RGB component initialized");
+    }
+  }
+
   rclcpp::TimerBase::SharedPtr mTimer;
   rclcpp::Publisher<sensor_msgs::msg::CompressedImage>::SharedPtr mPublisherCompressed;
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr mPublisherRaw;
-  pipuck_image_t mCapturedImage;
-  pipuck_image_t mCompressedImage;
-  pipuck_image_t mRgbEncodedImage;
   OnSetParametersCallbackHandle::SharedPtr mCallbackHandler;
-  char mImageBuffer[900 * 1024];
+  char mJpegImageBuffer[900 * 1024];
   char mRgbImageBuffer[640 * 480 * 3 + 1000];
   bool mV4l2Initialized;
   bool mJpegInitialized;
-  CameraMode mMode;
+  bool mRgbInitialized;
+  pipuck_mmal_t mPipuckMmalJpeg;
+  pipuck_mmal_t mPipuckMmalRgb;
 };
 
 int main(int argc, char *argv[]) {
