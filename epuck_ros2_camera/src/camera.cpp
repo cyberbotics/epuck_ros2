@@ -14,7 +14,6 @@
 
 #include <chrono>
 #include <memory>
-#include <opencv2/opencv.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/compressed_image.hpp>
 #include <sensor_msgs/msg/image.hpp>
@@ -27,40 +26,38 @@ extern "C" {
 #include "epuck_ros2_camera/pipuck_v4l2.h"
 }
 
-enum CameraMode {
-  CAMERA_MODE_NONE = 0,
-  CAMERA_MODE_RAW_RGB,
-  CAMERA_MODE_COMPRESSED_JPEG
-};
+enum CameraMode { CAMERA_MODE_NONE = 0, CAMERA_MODE_RAW_RGB, CAMERA_MODE_COMPRESSED_JPEG };
 
 class CameraPublisher : public rclcpp::Node {
 public:
-  CameraPublisher() : Node("camera_publisher") {
+  CameraPublisher() : Node("camera_publisher"), mMode(CAMERA_MODE_NONE) {
+    // Add parameters
     auto quality = declare_parameter<int>("quality", 8);
     auto interval = declare_parameter<int>("interval", 80);
 
-    mMode = CAMERA_MODE_NONE;
+    // Configure input/output formats
     pipuck_image_init(&mCapturedImage);
     pipuck_image_init(&mCompressedImage);
-
     mCompressedImage.quality = quality;
     mCompressedImage.data = mImageBuffer;
+    mRgbEncodedImage.data = mRgbImageBuffer;
     mCompressedImage.encoding = PIPUCK_IMAGE_ENCODING_JPEG;
+    mRgbEncodedImage.encoding = PIPUCK_IMAGE_ENCODING_RGB24;
     mCapturedImage.encoding = PIPUCK_IMAGE_ENCODING_YUYV;
 
-    pipuck_ov7670_init();
-
+    // Prepare ROS topics
     mCallbackHandler =
       this->add_on_set_parameters_callback(std::bind(&CameraPublisher::param_change_callback, this, std::placeholders::_1));
-
     mPublisherCompressed = this->create_publisher<sensor_msgs::msg::CompressedImage>("image_raw/compressed", 0);
     mPublisherRaw = this->create_publisher<sensor_msgs::msg::Image>("image_raw", 0);
     mTimer = this->create_wall_timer(std::chrono::milliseconds(interval), std::bind(&CameraPublisher::timer_callback, this));
   }
 
   ~CameraPublisher() {
-    if (mMode == CAMERA_MODE_RAW_RGB || mMode == CAMERA_MODE_COMPRESSED_JPEG)
+    if (mMode == CAMERA_MODE_RAW_RGB || mMode == CAMERA_MODE_COMPRESSED_JPEG) {
       pipuck_v4l2_deinit();
+      pipuck_jpeg_deinit();
+    }
   }
 
 private:
@@ -70,11 +67,9 @@ private:
 
     for (auto parameter : parameters) {
       if (parameter.get_name() == "quality") {
-        if (mJpegInitialized)
-          pipuck_jpeg_deinit();
+        setMode(CAMERA_MODE_NONE);
         mCompressedImage.quality = parameter.as_int();
-        if (mJpegInitialized)
-          pipuck_jpeg_init(&mCapturedImage, &mCompressedImage);
+        setMode(CAMERA_MODE_COMPRESSED_JPEG);
 
       } else if (parameter.get_name() == "interval") {
         mTimer->cancel();
@@ -92,17 +87,21 @@ private:
   void setMode(CameraMode mode) {
     // Check if it is different
     if (mode == mMode)
-      return; 
+      return;
 
     // Deinit if previous mode required GPU
-    if (mMode == CAMERA_MODE_RAW_RGB || mMode == CAMERA_MODE_COMPRESSED_JPEG) {
-      pipuck_jpeg_deinit();
-      pipuck_v4l2_deinit();
-    }
+    pipuck_jpeg_deinit();
+    pipuck_v4l2_deinit();
 
     // Init new configuration
-    if (mMode == CAMERA_MODE_RAW_RGB || mMode == CAMERA_MODE_COMPRESSED_JPEG) {
+    if (mMode == CAMERA_MODE_RAW_RGB) {
+      pipuck_ov7670_init();
       pipuck_v4l2_init();
+      pipuck_jpeg_init(&mCapturedImage, &mRgbEncodedImage);
+    } else if (mMode == CAMERA_MODE_COMPRESSED_JPEG) {
+      pipuck_ov7670_init();
+      pipuck_v4l2_init();
+      pipuck_jpeg_init(&mCapturedImage, &mCompressedImage);
     }
 
     mMode = mode;
@@ -116,15 +115,11 @@ private:
       setMode(CAMERA_MODE_RAW_RGB);
     else
       setMode(CAMERA_MODE_NONE);
-    
+
     // Publish image
     if (mMode == CAMERA_MODE_RAW_RGB) {
       pipuck_v4l2_capture(&mCapturedImage);
-
-      cv::Mat inputMat(mCapturedImage.height, mCapturedImage.width, CV_8UC2, mCapturedImage.data);
-      cv::Mat outputMat;
-      // COLOR_YUV2BGR_Y422
-      cv::cvtColor(inputMat, outputMat, cv::COLOR_YUV2BGR_YUY2);
+      pipuck_jpeg_encode(&mCapturedImage, &mRgbEncodedImage);
 
       auto message = sensor_msgs::msg::Image();
       message.encoding = "rgb8";
@@ -134,8 +129,9 @@ private:
       message.is_bigendian = false;
       message.header.stamp = now();
       message.header.frame_id = "pipuck_image_raw";
-      message.data.assign(outputMat.data, outputMat.data + mCapturedImage.height * mCapturedImage.width * 3);
+      message.data.assign(mRgbEncodedImage.data, mRgbEncodedImage.data + mCapturedImage.height * mCapturedImage.width * 3);
     } else if (mMode == CAMERA_MODE_COMPRESSED_JPEG) {
+      pipuck_v4l2_capture(&mCapturedImage);
       pipuck_jpeg_encode(&mCapturedImage, &mCompressedImage);
 
       auto message = sensor_msgs::msg::CompressedImage();

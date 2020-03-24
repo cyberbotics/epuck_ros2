@@ -71,9 +71,11 @@ int main() {
   pipuck_image_init(&input_image);
   pipuck_image_init(&output_image);
 
+  input_image.encoding = PIPUCK_IMAGE_ENCODING_YUYV;
   output_image.quality = 10;
   output_image.data = output_image_buffer;
-  input_image.encoding = PIPUCK_IMAGE_ENCODING_YUYV;
+  output_image.encoding = MMAL_ENCODING_JPEG;
+  // output_image.encoding = MMAL_ENCODING_RGB24;
 
   pipuck_ov7670_init();
   pipuck_v4l2_init();
