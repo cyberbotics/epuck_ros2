@@ -31,7 +31,7 @@ typedef struct pipuck_mmal_internal_t_ {
 typedef struct pipuck_mmal_t_ {
     pipuck_image_t input;
     pipuck_image_t output;
-    char component[20];
+    char component[25];
     pipuck_mmal_internal_t internal;
 } pipuck_mmal_t;
 

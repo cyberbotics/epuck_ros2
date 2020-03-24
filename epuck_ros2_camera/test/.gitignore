@@ -1,7 +1,7 @@
 *.jpg
 *.raw
-*.rgb22
-*.yuv420
+*.rgb24
+*.yuv422
 v4l2_to_rgb24
 CMakeFiles
 cmake_install.cmake

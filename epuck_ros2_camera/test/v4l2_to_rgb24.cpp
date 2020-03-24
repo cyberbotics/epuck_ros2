@@ -30,7 +30,7 @@ extern "C" {
 #include <fstream>
 #include <iostream>
 
-void convert(pipuck_mmal_t* pipuck_mmal, std::string output_filename) {
+void convert(pipuck_mmal_t *pipuck_mmal, std::string output_filename) {
   std::ofstream file;
   file.open(output_filename, std::ios::out | std::ios::binary);
 
@@ -67,25 +67,53 @@ void capture(pipuck_image_t *input_image, std::string output_filename) {
 }
 
 int main() {
-  pipuck_mmal_t pipuck_mmal;
-  // char output_image_buffer[500 * 1024];
-  char output_image_buffer[640 * 480 * 4];
+  pipuck_mmal_t pipuck_mmal_rgb24;
+  pipuck_mmal_t pipuck_mmal_jpeg;
 
-  pipuck_mmal_create(&pipuck_mmal);
-  pipuck_mmal.output.data = output_image_buffer;
+  char output_rgb24_file[] = "image1.rgb24";
+  char input_yuv422_file[] = "image1.yuv422";
+  char output_jpeg_file[] = "image1.jpg";
+
+  // We can share buffer if we are careful
+  char output_buffer[640 * 480 * 3];
+
+  // MMAL Init: RGB24
+  pipuck_mmal_create(&pipuck_mmal_rgb24);
+  strcpy(pipuck_mmal_rgb24.component, "vc.ril.isp");
+  pipuck_mmal_rgb24.output.data = output_buffer;
+  pipuck_mmal_rgb24.output.encoding = MMAL_ENCODING_RGB24;
+  pipuck_mmal_init(&pipuck_mmal_rgb24);
+  std::cout << "RGB24 convertor is initialized" << std::endl;
+
+  // MMAL Init: JPEG
+  pipuck_mmal_create(&pipuck_mmal_jpeg);
+  strcpy(pipuck_mmal_jpeg.component, "vc.ril.image_encode");
+  pipuck_mmal_jpeg.output.data = output_buffer;
+  pipuck_mmal_jpeg.output.encoding = MMAL_ENCODING_JPEG;
+  pipuck_mmal_init(&pipuck_mmal_jpeg);
+  std::cout << "JPEG convertor is initialized" << std::endl;
 
   pipuck_ov7670_init();
   pipuck_v4l2_init();
-  pipuck_mmal_init(&pipuck_mmal);
 
-  capture(&(pipuck_mmal.input), "image1.yuv422");
-  convert(&pipuck_mmal, "image1.rgb24");
+  for (int i = 0; i < 5; i++) {
+    // Set file anme
+    input_yuv422_file[5] = '1' + i;
+    output_jpeg_file[5] = '1' + i;
+    output_rgb24_file[5] = '1' + i;
 
-  capture(&(pipuck_mmal.input), "image2.yuv422");
-  convert(&pipuck_mmal, "image2.rgb24");
+    // Capture (share the same buffer instead of taking two images)
+    capture(&(pipuck_mmal_rgb24.input), input_yuv422_file);
+    pipuck_mmal_jpeg.input.data = pipuck_mmal_rgb24.input.data;
+
+    // Convert
+    convert(&pipuck_mmal_rgb24, output_rgb24_file);
+    convert(&pipuck_mmal_jpeg, output_jpeg_file);
+  }
 
   pipuck_v4l2_deinit();
-  pipuck_mmal_deinit(&pipuck_mmal);
+  pipuck_mmal_deinit(&pipuck_mmal_rgb24);
+  pipuck_mmal_deinit(&pipuck_mmal_jpeg);
 
   return 0;
 }
