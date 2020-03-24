@@ -16,10 +16,28 @@
 #define MMAL_JPEG_H
 
 #include "epuck_ros2_camera/pipuck_image.h"
-#include <inttypes.h>
 
-void pipuck_jpeg_init(pipuck_image_t *input_image, pipuck_image_t *output_image);
-int pipuck_jpeg_encode(pipuck_image_t *input_image, pipuck_image_t *output_image);
-void pipuck_jpeg_deinit();
+#include <interface/mmal/mmal.h>
+#include <interface/vcos/vcos.h>
+
+typedef struct pipuck_mmal_internal_t_ {
+    MMAL_COMPONENT_T *encoder;
+    MMAL_POOL_T *pool_in;
+    MMAL_POOL_T *pool_out;
+    VCOS_SEMAPHORE_T semaphore;
+    MMAL_QUEUE_T *queue;
+} pipuck_mmal_internal_t;
+
+typedef struct pipuck_mmal_t_ {
+    pipuck_image_t input;
+    pipuck_image_t output;
+    char component[20];
+    pipuck_mmal_internal_t internal;
+} pipuck_mmal_t;
+
+void pipuck_mmal_init(pipuck_mmal_t* pipuck_mmal);
+void pipuck_mmal_create(pipuck_mmal_t *pipuck_mmal);
+int pipuck_mmal_convert(pipuck_mmal_t* pipuck_mmal);
+void pipuck_mmal_deinit(pipuck_mmal_t* pipuck_mmal);
 
 #endif

@@ -1,6 +1,8 @@
 *.jpg
 *.raw
-camera
+*.rgb22
+*.yuv420
+v4l2_to_rgb24
 CMakeFiles
 cmake_install.cmake
 CMakeCache.txt

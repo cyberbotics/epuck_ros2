@@ -14,21 +14,21 @@ set(MMAL_LIBS
   /opt/vc/lib/libvchostif.a
 )
 
-add_executable(camera
-    v4l2_to_jpeg.cpp
+add_executable(v4l2_to_rgb24
+  v4l2_to_rgb24.cpp
   ../src/pipuck_v4l2.c
   ../src/pipuck_jpeg.c
   ../src/pipuck_ov7670.c
   ../src/pipuck_image.c
 )
 
-target_include_directories(camera PUBLIC
+target_include_directories(v4l2_to_rgb24 PUBLIC
     ../include
   /opt/vc/include
   /opt/vc/include/interface/vcos/pthreads
   /opt/vc/include/interface/vmcs_host/linux
 )
 
-target_link_libraries(camera
+target_link_libraries(v4l2_to_rgb24
   ${MMAL_LIBS}
 )
