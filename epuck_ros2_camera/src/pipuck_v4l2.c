@@ -30,6 +30,7 @@ static int f;
 static int status;
 static char *buffer;
 static struct v4l2_buffer bufferinfo;
+static struct v4l2_buffer querybuffer;
 
 void pipuck_v4l2_init() {
   f = open("/dev/video0", O_RDWR);
@@ -51,7 +52,7 @@ void pipuck_v4l2_init() {
   assert(status >= 0);
 
   // Request buffers
-  struct v4l2_requestbuffers requestbuffers = {0};
+  struct v4l2_requestbuffers requestbuffers;
   requestbuffers.count = 1;
   requestbuffers.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
   requestbuffers.memory = V4L2_MEMORY_MMAP;
@@ -59,7 +60,6 @@ void pipuck_v4l2_init() {
   assert(status >= 0);
 
   // Query the buffer
-  struct v4l2_buffer querybuffer = {0};
   querybuffer.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
   querybuffer.memory = V4L2_MEMORY_MMAP;
   querybuffer.index = 0;
@@ -96,4 +96,7 @@ void pipuck_v4l2_capture(pipuck_image_t *image) {
 void pipuck_v4l2_deinit() {
   status = ioctl(f, VIDIOC_STREAMOFF, &bufferinfo.type);
   assert(status >= 0);
+
+  munmap(buffer, querybuffer.length);
+  close(f);
 }

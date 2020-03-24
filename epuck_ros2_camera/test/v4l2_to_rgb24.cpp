@@ -77,43 +77,45 @@ int main() {
   // We can share buffer if we are careful
   char output_buffer[640 * 480 * 3];
 
-  // MMAL Init: RGB24
-  pipuck_mmal_create(&pipuck_mmal_rgb24);
-  strcpy(pipuck_mmal_rgb24.component, "vc.ril.isp");
-  pipuck_mmal_rgb24.output.data = output_buffer;
-  pipuck_mmal_rgb24.output.encoding = MMAL_ENCODING_RGB24;
-  pipuck_mmal_init(&pipuck_mmal_rgb24);
-  std::cout << "RGB24 convertor is initialized" << std::endl;
+  for (int j = 0; j < 3; j++) {
+    // MMAL Init: RGB24
+    pipuck_mmal_create(&pipuck_mmal_rgb24);
+    strcpy(pipuck_mmal_rgb24.component, "vc.ril.isp");
+    pipuck_mmal_rgb24.output.data = output_buffer;
+    pipuck_mmal_rgb24.output.encoding = MMAL_ENCODING_RGB24;
+    pipuck_mmal_init(&pipuck_mmal_rgb24);
+    std::cout << "RGB24 convertor is initialized" << std::endl;
 
-  // MMAL Init: JPEG
-  pipuck_mmal_create(&pipuck_mmal_jpeg);
-  strcpy(pipuck_mmal_jpeg.component, "vc.ril.image_encode");
-  pipuck_mmal_jpeg.output.data = output_buffer;
-  pipuck_mmal_jpeg.output.encoding = MMAL_ENCODING_JPEG;
-  pipuck_mmal_init(&pipuck_mmal_jpeg);
-  std::cout << "JPEG convertor is initialized" << std::endl;
+    // MMAL Init: JPEG
+    pipuck_mmal_create(&pipuck_mmal_jpeg);
+    strcpy(pipuck_mmal_jpeg.component, "vc.ril.image_encode");
+    pipuck_mmal_jpeg.output.data = output_buffer;
+    pipuck_mmal_jpeg.output.encoding = MMAL_ENCODING_JPEG;
+    pipuck_mmal_init(&pipuck_mmal_jpeg);
+    std::cout << "JPEG convertor is initialized" << std::endl;
 
-  pipuck_ov7670_init();
-  pipuck_v4l2_init();
+    pipuck_ov7670_init();
+    pipuck_v4l2_init();
 
-  for (int i = 0; i < 5; i++) {
-    // Set file anme
-    input_yuv422_file[5] = '1' + i;
-    output_jpeg_file[5] = '1' + i;
-    output_rgb24_file[5] = '1' + i;
+    for (int i = 0; i < 5; i++) {
+      // Set file anme
+      input_yuv422_file[5] = '1' + i;
+      output_jpeg_file[5] = '1' + i;
+      output_rgb24_file[5] = '1' + i;
 
-    // Capture (share the same buffer instead of taking two images)
-    capture(&(pipuck_mmal_rgb24.input), input_yuv422_file);
-    pipuck_mmal_jpeg.input.data = pipuck_mmal_rgb24.input.data;
+      // Capture (share the same buffer instead of taking two images)
+      capture(&(pipuck_mmal_rgb24.input), input_yuv422_file);
+      pipuck_mmal_jpeg.input.data = pipuck_mmal_rgb24.input.data;
 
-    // Convert
-    convert(&pipuck_mmal_rgb24, output_rgb24_file);
-    convert(&pipuck_mmal_jpeg, output_jpeg_file);
+      // Convert
+      convert(&pipuck_mmal_rgb24, output_rgb24_file);
+      convert(&pipuck_mmal_jpeg, output_jpeg_file);
+    }
+
+    pipuck_v4l2_deinit();
+    pipuck_mmal_deinit(&pipuck_mmal_rgb24);
+    pipuck_mmal_deinit(&pipuck_mmal_jpeg);
   }
-
-  pipuck_v4l2_deinit();
-  pipuck_mmal_deinit(&pipuck_mmal_rgb24);
-  pipuck_mmal_deinit(&pipuck_mmal_jpeg);
 
   return 0;
 }
