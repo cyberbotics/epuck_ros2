@@ -31,7 +31,7 @@ extern "C" {
 
 class CameraPublisher : public rclcpp::Node {
 public:
-  CameraPublisher() : Node("epuck_ros2_camera"), mV4l2Initialized(false), mJpegInitialized(false), mRgbInitialized(false) {
+  CameraPublisher() : Node("epuck_ros2_camera"), mIsV4l2Initialized(false), mIsJpegInitialized(false), mIsRgbInitialized(false) {
     // Add parameters
     int quality = declare_parameter<int>("quality", 8);
     const int framerate = declare_parameter<int>("framerate", 10);
@@ -171,17 +171,17 @@ private:
   }
 
   void initV4l2() {
-    if (!mV4l2Initialized) {
+    if (!mIsV4l2Initialized) {
       pipuck_v4l2_init();
-      mV4l2Initialized = true;
+      mIsV4l2Initialized = true;
       RCLCPP_INFO(this->get_logger(), "V4L2 component initialized");
     }
   }
 
   void deinitV4l2() {
-    if (mV4l2Initialized) {
+    if (mIsV4l2Initialized) {
       pipuck_v4l2_deinit();
-      mV4l2Initialized = false;
+      mIsV4l2Initialized = false;
       RCLCPP_INFO(this->get_logger(), "V4L2 component deinitialized");
       deinitJpeg();
       deinitRgb();
@@ -189,23 +189,23 @@ private:
   }
 
   void deinitJpeg() {
-    if (mJpegInitialized) {
+    if (mIsJpegInitialized) {
       pipuck_mmal_deinit(&mPipuckMmalJpeg);
-      mJpegInitialized = false;
+      mIsJpegInitialized = false;
       RCLCPP_INFO(this->get_logger(), "MMAL JPEG component deinitialized");
     }
   }
 
   void initJpeg() {
-    if (!mJpegInitialized) {
+    if (!mIsJpegInitialized) {
       pipuck_mmal_init(&mPipuckMmalJpeg);
-      mJpegInitialized = true;
+      mIsJpegInitialized = true;
       RCLCPP_INFO(this->get_logger(), "MMAL JPEG component initialized");
     }
   }
 
   void deinitRgb() {
-    if (mRgbInitialized) {
+    if (mIsRgbInitialized) {
       pipuck_mmal_deinit(&mPipuckMmalRgb);
       mRgbInitialized = false;
       RCLCPP_INFO(this->get_logger(), "MMAL RGB component deinitialized");
@@ -213,9 +213,9 @@ private:
   }
 
   void initRgb() {
-    if (!mRgbInitialized) {
+    if (!mIsRgbInitialized) {
       pipuck_mmal_init(&mPipuckMmalRgb);
-      mRgbInitialized = true;
+      mIsRgbInitialized = true;
       RCLCPP_INFO(this->get_logger(), "MMAL RGB component initialized");
     }
   }
@@ -226,8 +226,8 @@ private:
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr mPublisherRaw;
   OnSetParametersCallbackHandle::SharedPtr mCallbackHandler;
   char mImageBuffer[900 * 1024];
-  bool mV4l2Initialized;
-  bool mJpegInitialized;
+  bool mIsV4l2Initialized;
+  bool mIsJpegInitialized;
   bool mIsRgbInitialized;
   pipuck_mmal_t mPipuckMmalJpeg;
   pipuck_mmal_t mPipuckMmalRgb;
