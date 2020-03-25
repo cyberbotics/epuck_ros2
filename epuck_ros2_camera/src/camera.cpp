@@ -228,7 +228,7 @@ private:
   char mImageBuffer[900 * 1024];
   bool mV4l2Initialized;
   bool mJpegInitialized;
-  bool mRgbInitialized;
+  bool mIsRgbInitialized;
   pipuck_mmal_t mPipuckMmalJpeg;
   pipuck_mmal_t mPipuckMmalRgb;
   sensor_msgs::msg::CameraInfo mCameraInfoMsg;
