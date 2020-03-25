@@ -58,7 +58,7 @@ public:
     // Load intrisic camera parameters
     camera_info_manager::CameraInfoManager cameraInfoManager(this, cameraName, cameraInfoUrl);
     if (!cameraInfoManager.loadCameraInfo(cameraInfoUrl))
-      RCLCPP_INFO(this->get_logger(), "Calibration file %s is missing", cameraInfoUrl.c_str());
+      RCLCPP_INFO(this->get_logger(), "Calibration file '%s' is missing", cameraInfoUrl.c_str());
     else {
       mCameraInfoMsg = cameraInfoManager.getCameraInfo();
       RCLCPP_INFO(this->get_logger(), "Calibration calibrated from file %s", cameraInfoUrl.c_str());
