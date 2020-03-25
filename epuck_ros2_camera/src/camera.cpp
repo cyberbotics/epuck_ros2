@@ -31,7 +31,7 @@ public:
   CameraPublisher() : Node("epuck_ros2_camera"), mV4l2Initialized(false), mJpegInitialized(false), mRgbInitialized(false) {
     // Add parameters
     auto quality = declare_parameter<int>("quality", 8);
-    auto interval = declare_parameter<int>("interval", 80);
+    auto framerate = declare_parameter<int>("framerate", 10);
 
     // MMAL JPEG
     pipuck_mmal_create(&mPipuckMmalJpeg);
@@ -51,7 +51,7 @@ public:
       this->add_on_set_parameters_callback(std::bind(&CameraPublisher::param_change_callback, this, std::placeholders::_1));
     mPublisherCompressed = this->create_publisher<sensor_msgs::msg::CompressedImage>("image_raw/compressed", 0);
     mPublisherRaw = this->create_publisher<sensor_msgs::msg::Image>("image_raw", 0);
-    mTimer = this->create_wall_timer(std::chrono::milliseconds(interval), std::bind(&CameraPublisher::timerCallback, this));
+    mTimer = this->create_wall_timer(std::chrono::milliseconds(1000 / framerate), std::bind(&CameraPublisher::timerCallback, this));
     RCLCPP_INFO(this->get_logger(), "E-puck2 camera is ready");
   }
 
@@ -71,9 +71,9 @@ private:
         deinitJpeg();
         mPipuckMmalJpeg.output.quality = parameter.as_int();
         initJpeg();
-      } else if (parameter.get_name() == "interval") {
+      } else if (parameter.get_name() == "framerate") {
         mTimer->cancel();
-        mTimer = this->create_wall_timer(std::chrono::milliseconds(parameter.as_int()),
+        mTimer = this->create_wall_timer(std::chrono::milliseconds(1000 / parameter.as_int()),
                                          std::bind(&CameraPublisher::timerCallback, this));
       }
 
