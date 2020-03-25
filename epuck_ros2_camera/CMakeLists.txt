@@ -18,9 +18,8 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
-find_package(OpenCV REQUIRED)
+find_package(camera_info_manager REQUIRED)
 
 set(MMAL_LIBS
   pthread
@@ -51,6 +50,7 @@ target_include_directories(camera PUBLIC
 ament_target_dependencies(camera
   rclcpp
   sensor_msgs
+  camera_info_manager
 )
 
 target_link_libraries(camera
@@ -59,7 +59,12 @@ target_link_libraries(camera
 
 install(TARGETS camera
   EXPORT export_${PROJECT_NAME}
-  DESTINATION lib/${PROJECT_NAME})
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(DIRECTORY camera_info/
+  DESTINATION share/epuck_ros2_camera/camera_info
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
