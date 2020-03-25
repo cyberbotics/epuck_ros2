@@ -79,9 +79,9 @@ public:
   }
 
   ~CameraPublisher() {
-    deinitV4l2();
-    deinitRgb();
-    deinitJpeg();
+    deinitV4l2IfNeeded();
+    deinitRgbIfNeeded();
+    deinitJpegIfNeeded();
   }
 
 private:
@@ -91,9 +91,9 @@ private:
 
     for (auto parameter : parameters) {
       if (parameter.get_name() == "quality") {
-        deinitJpeg();
+        deinitJpegIfNeeded();
         mPipuckMmalJpeg.output.quality = parameter.as_int();
-        initJpeg();
+        initJpegIfNeeded();
       } else if (parameter.get_name() == "framerate") {
         mTimer->cancel();
         mTimer = this->create_wall_timer(std::chrono::milliseconds(1000 / parameter.as_int()),
@@ -102,10 +102,10 @@ private:
         const int width = parameter.as_int();
         const int height = parameter.as_int() / IMAGE_RATIO;
 
-        deinitRgb();
+        deinitRgbIfNeeded();
         mPipuckMmalRgb.output.width = width;
         mPipuckMmalRgb.output.height = height;
-        initRgb();
+        initRgbIfNeeded();
         RCLCPP_INFO(this->get_logger(), "New RGB resolution is %dx%d", width, height);
       }
 
@@ -119,12 +119,12 @@ private:
   void timerCallback() {
     // Uninitialize V4L2 if needed
     if (mPublisherCompressed->get_subscription_count() == 0 && mPublisherRaw->get_subscription_count() == 0) {
-      deinitV4l2();
+      deinitV4l2IfNeeded();
       return;
     }
 
     // Capture an image
-    initV4l2();
+    initV4l2IfNeeded();
     pipuck_v4l2_capture(&(mPipuckMmalRgb.input));
     auto stamp = now();
 
@@ -134,7 +134,7 @@ private:
 
     // Publish RAW RGB image if needed
     if (mPublisherRaw->get_subscription_count() > 0) {
-      initRgb();
+      initRgbIfNeeded();
 
       pipuck_mmal_convert(&mPipuckMmalRgb);
       auto message = sensor_msgs::msg::Image();
@@ -148,11 +148,11 @@ private:
       message.data.assign(mPipuckMmalRgb.output.data, mPipuckMmalRgb.output.data + mPipuckMmalRgb.output.size);
       mPublisherRaw->publish(message);
     } else
-      deinitRgb();
+      deinitRgbIfNeeded();
 
     // Publish JPEG compressed image if needed
     if (mPublisherCompressed->get_subscription_count() > 0) {
-      initJpeg();
+      initJpegIfNeeded();
 
       // It's the same data for both topics
       mPipuckMmalJpeg.input.data = mPipuckMmalRgb.input.data;
@@ -166,10 +166,10 @@ private:
       message.data.assign(mPipuckMmalJpeg.output.data, mPipuckMmalJpeg.output.data + mPipuckMmalJpeg.output.size);
       mPublisherCompressed->publish(message);
     } else
-      deinitJpeg();
+      deinitJpegIfNeeded();
   }
 
-  void initV4l2() {
+  void initV4l2IfNeeded() {
     if (!mIsV4l2Initialized) {
       pipuck_v4l2_init();
       mIsV4l2Initialized = true;
@@ -177,17 +177,17 @@ private:
     }
   }
 
-  void deinitV4l2() {
+  void deinitV4l2IfNeeded() {
     if (mIsV4l2Initialized) {
       pipuck_v4l2_deinit();
       mIsV4l2Initialized = false;
       RCLCPP_INFO(this->get_logger(), "V4L2 component deinitialized");
-      deinitJpeg();
-      deinitRgb();
+      deinitJpegIfNeeded();
+      deinitRgbIfNeeded();
     }
   }
 
-  void deinitJpeg() {
+  void deinitJpegIfNeeded() {
     if (mIsJpegInitialized) {
       pipuck_mmal_deinit(&mPipuckMmalJpeg);
       mIsJpegInitialized = false;
@@ -195,7 +195,7 @@ private:
     }
   }
 
-  void initJpeg() {
+  void initJpegIfNeeded() {
     if (!mIsJpegInitialized) {
       pipuck_mmal_init(&mPipuckMmalJpeg);
       mIsJpegInitialized = true;
@@ -203,7 +203,7 @@ private:
     }
   }
 
-  void deinitRgb() {
+  void deinitRgbIfNeeded() {
     if (mIsRgbInitialized) {
       pipuck_mmal_deinit(&mPipuckMmalRgb);
       mIsRgbInitialized = false;
@@ -211,7 +211,7 @@ private:
     }
   }
 
-  void initRgb() {
+  void initRgbIfNeeded() {
     if (!mIsRgbInitialized) {
       pipuck_mmal_init(&mPipuckMmalRgb);
       mIsRgbInitialized = true;
