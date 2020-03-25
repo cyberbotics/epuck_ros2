@@ -37,7 +37,7 @@ typedef struct pipuck_mmal_t_ {
 
 void pipuck_mmal_init(pipuck_mmal_t* pipuck_mmal);
 void pipuck_mmal_create(pipuck_mmal_t *pipuck_mmal);
-int pipuck_mmal_convert(pipuck_mmal_t* pipuck_mmal);
+void pipuck_mmal_convert(pipuck_mmal_t* pipuck_mmal);
 void pipuck_mmal_deinit(pipuck_mmal_t* pipuck_mmal);
 
 #endif

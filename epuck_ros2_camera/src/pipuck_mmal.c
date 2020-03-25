@@ -140,7 +140,7 @@ void pipuck_mmal_deinit(pipuck_mmal_t *pipuck_mmal) {
   vcos_semaphore_delete(&(pipuck_mmal->internal.semaphore));
 }
 
-int pipuck_mmal_convert(pipuck_mmal_t *pipuck_mmal) {
+void pipuck_mmal_convert(pipuck_mmal_t *pipuck_mmal) {
   MMAL_BOOL_T eos = MMAL_FALSE;
   int sent_bytes = 0;
   MMAL_BUFFER_HEADER_T *buffer;
@@ -182,6 +182,4 @@ int pipuck_mmal_convert(pipuck_mmal_t *pipuck_mmal) {
       assert(status == MMAL_SUCCESS);
     }
   }
-
-  return 0;
 }
