@@ -34,7 +34,7 @@ public:
   CameraPublisher() : Node("epuck_ros2_camera"), mV4l2Initialized(false), mJpegInitialized(false), mRgbInitialized(false) {
     // Add parameters
     int quality = declare_parameter<int>("quality", 8);
-    int framerate = declare_parameter<int>("framerate", 10);
+    const int framerate = declare_parameter<int>("framerate", 10);
     const int width = declare_parameter<int>("width", 640);
     std::string cameraInfoUrl =
       declare_parameter<std::string>("camera_info_url", "package://epuck_ros2_camera/camera_info/camera.yaml");
