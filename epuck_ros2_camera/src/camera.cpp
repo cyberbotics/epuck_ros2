@@ -35,7 +35,7 @@ public:
     // Add parameters
     int quality = declare_parameter<int>("quality", 8);
     int framerate = declare_parameter<int>("framerate", 10);
-    int width = declare_parameter<int>("width", 640);
+    const int width = declare_parameter<int>("width", 640);
     std::string cameraInfoUrl =
       declare_parameter<std::string>("camera_info_url", "package://epuck_ros2_camera/camera_info/camera.yaml");
     std::string cameraName = declare_parameter<std::string>("camera_name", "camera");
