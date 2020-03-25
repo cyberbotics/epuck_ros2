@@ -5,11 +5,12 @@ This ROS2 driver takes images from camera device located on e-puck2 robot. It us
 ## Parameters
 - `quality` Quality of JPEG conversion (default 8)
 - `interval` Interval of image acquisition in milliseconds (default 80) 
-- `width` Width of the output RGB image, height is automatically calculated (default 640, valid values [640, 320, 256, 128, 64])
+- `width` Width of the output RGB images, height is automatically calculated (default 640, valid values [640, 320, 256, 128, 64])
 
 ## Topics
-- `/image_raw [sensor_msgs/msg/Image]` Raw RGB images
-- `/image_raw/compressed [sensor_msgs/msg/CompressedImage]` JPEG compressed images
+- `/image_raw` [[sensor_msgs/msg/Image](https://github.com/ros2/common_interfaces/blob/master/sensor_msgs/msg/Image.msg)] Raw RGB images
+- `/image_raw/compressed` [[sensor_msgs/msg/CompressedImage](https://github.com/ros2/common_interfaces/blob/master/sensor_msgs/msg/CompressedImage.msg)] JPEG compressed images
+- `/camera_info` [[sensor_msgs/msg/CameraInfo](https://github.com/ros2/common_interfaces/blob/master/sensor_msgs/msg/CameraInfo.msg)] Information about the camera (e.g. intrinsic parameters)
 
 There a few things to note here, mainly related to Raspberry Pi Zero computational power and WiFi bandwidth.
 - Images will be published only if there is at least one subscriber to avoid unnecessary computation.
