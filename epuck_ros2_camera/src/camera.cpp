@@ -33,12 +33,12 @@ class CameraPublisher : public rclcpp::Node {
 public:
   CameraPublisher() : Node("epuck_ros2_camera"), mIsV4l2Initialized(false), mIsJpegInitialized(false), mIsRgbInitialized(false) {
     // Add parameters
-    int quality = declare_parameter<int>("quality", 8);
+    const int quality = declare_parameter<int>("quality", 8);
     const int framerate = declare_parameter<int>("framerate", 10);
     const int width = declare_parameter<int>("width", 640);
-    std::string cameraInfoUrl =
+    const std::string cameraInfoUrl =
       declare_parameter<std::string>("camera_info_url", "package://epuck_ros2_camera/camera_info/camera.yaml");
-    std::string cameraName = declare_parameter<std::string>("camera_name", "camera");
+    const std::string cameraName = declare_parameter<std::string>("camera_name", "camera");
 
     // MMAL JPEG
     pipuck_mmal_create(&mPipuckMmalJpeg);
@@ -99,8 +99,8 @@ private:
         mTimer = this->create_wall_timer(std::chrono::milliseconds(1000 / parameter.as_int()),
                                          std::bind(&CameraPublisher::timerCallback, this));
       } else if (parameter.get_name() == "width") {
-        int width = parameter.as_int();
-        int height = parameter.as_int() / IMAGE_RATIO;
+        const int width = parameter.as_int();
+        const int height = parameter.as_int() / IMAGE_RATIO;
 
         deinitRgb();
         mPipuckMmalRgb.output.width = width;
@@ -120,7 +120,10 @@ private:
     auto stamp = now();
 
     // Initialize V4L2 if needed
-    if (mPublisherCompressed->get_subscription_count() > 0 || mPublisherRaw->get_subscription_count()) {
+    if (mPublisherCompressed->get_subscription_count() == 0 && mPublisherRaw->get_subscription_count() == 0) {
+      deinitV4l2();
+      return;
+    } else {
       // Capture an image
       initV4l2();
       pipuck_v4l2_capture(&(mPipuckMmalRgb.input));
@@ -128,9 +131,6 @@ private:
       // Publish camera info
       mCameraInfoMsg.header.stamp = stamp;
       mPublisherCameraInfo->publish(mCameraInfoMsg);
-    } else {
-      deinitV4l2();
-      return;
     }
 
     // Publish RAW RGB image if needed
@@ -207,7 +207,7 @@ private:
   void deinitRgb() {
     if (mIsRgbInitialized) {
       pipuck_mmal_deinit(&mPipuckMmalRgb);
-      mRgbInitialized = false;
+      mIsRgbInitialized = false;
       RCLCPP_INFO(this->get_logger(), "MMAL RGB component deinitialized");
     }
   }
