@@ -5,6 +5,7 @@ This ROS2 driver takes images from camera device located on e-puck2 robot. It us
 ## Parameters
 - `quality` Quality of JPEG conversion (default 8)
 - `interval` Interval of image acquisition in milliseconds (default 80) 
+- `width` Width of the output RGB image, height is automatically calculated (default 640, valid values [640, 320, 256, 128, 64])
 
 ## Topics
 - `/image_raw [sensor_msgs/msg/Image]` Raw RGB images

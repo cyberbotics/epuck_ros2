@@ -91,6 +91,10 @@ void pipuck_mmal_init(pipuck_mmal_t *pipuck_mmal) {
   // Configure encoder output
   mmal_format_copy(context->encoder->output[0]->format, context->encoder->input[0]->format);
   context->encoder->output[0]->format->encoding = output_image->encoding;
+  context->encoder->output[0]->format->es->video.crop.width = output_image->width;
+  context->encoder->output[0]->format->es->video.crop.height = output_image->height;
+  context->encoder->output[0]->format->es->video.width = VCOS_ALIGN_UP(output_image->width, 32);
+  context->encoder->output[0]->format->es->video.height = VCOS_ALIGN_UP(output_image->height, 16);
   status = mmal_port_format_commit(context->encoder->output[0]);
   assert(status == MMAL_SUCCESS);
   if (output_image->encoding == MMAL_ENCODING_JPEG) {

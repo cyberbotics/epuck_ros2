@@ -26,12 +26,15 @@ extern "C" {
 #include "epuck_ros2_camera/pipuck_v4l2.h"
 }
 
+#define IMAGE_RATIO (4.0 / 3.0)
+
 class CameraPublisher : public rclcpp::Node {
 public:
   CameraPublisher() : Node("epuck_ros2_camera"), mV4l2Initialized(false), mJpegInitialized(false), mRgbInitialized(false) {
     // Add parameters
     auto quality = declare_parameter<int>("quality", 8);
     auto framerate = declare_parameter<int>("framerate", 10);
+    auto width = declare_parameter<int>("width", 640);
 
     // MMAL JPEG
     pipuck_mmal_create(&mPipuckMmalJpeg);
@@ -44,14 +47,20 @@ public:
     pipuck_mmal_create(&mPipuckMmalRgb);
     strcpy(mPipuckMmalRgb.component, "vc.ril.isp");
     mPipuckMmalRgb.output.data = mImageBuffer;
+    mPipuckMmalRgb.output.width = width;
+    mPipuckMmalRgb.output.height = width / IMAGE_RATIO;
     mPipuckMmalRgb.output.encoding = MMAL_ENCODING_RGB24;
+
+    // Configure the camera
+    pipuck_ov7670_init();
 
     // Prepare ROS topics
     mCallbackHandler =
-      this->add_on_set_parameters_callback(std::bind(&CameraPublisher::param_change_callback, this, std::placeholders::_1));
+      this->add_on_set_parameters_callback(std::bind(&CameraPublisher::onParamChangeCallback, this, std::placeholders::_1));
     mPublisherCompressed = this->create_publisher<sensor_msgs::msg::CompressedImage>("image_raw/compressed", 0);
     mPublisherRaw = this->create_publisher<sensor_msgs::msg::Image>("image_raw", 0);
-    mTimer = this->create_wall_timer(std::chrono::milliseconds(1000 / framerate), std::bind(&CameraPublisher::timerCallback, this));
+    mTimer =
+      this->create_wall_timer(std::chrono::milliseconds(1000 / framerate), std::bind(&CameraPublisher::timerCallback, this));
     RCLCPP_INFO(this->get_logger(), "E-puck2 camera is ready");
   }
 
@@ -62,7 +71,7 @@ public:
   }
 
 private:
-  rcl_interfaces::msg::SetParametersResult param_change_callback(std::vector<rclcpp::Parameter> parameters) {
+  rcl_interfaces::msg::SetParametersResult onParamChangeCallback(std::vector<rclcpp::Parameter> parameters) {
     auto result = rcl_interfaces::msg::SetParametersResult();
     result.successful = true;
 
@@ -75,6 +84,15 @@ private:
         mTimer->cancel();
         mTimer = this->create_wall_timer(std::chrono::milliseconds(1000 / parameter.as_int()),
                                          std::bind(&CameraPublisher::timerCallback, this));
+      } else if (parameter.get_name() == "width") {
+        int width = parameter.as_int();
+        int height = parameter.as_int() / IMAGE_RATIO;
+
+        deinitRgb();
+        mPipuckMmalRgb.output.width = width;
+        mPipuckMmalRgb.output.height = height;
+        initRgb();
+        RCLCPP_INFO(this->get_logger(), "New RGB resolution is %dx%d", width, height);
       }
 
       RCLCPP_INFO(this->get_logger(), "Parameter '%s' has changed to %s", parameter.get_name().c_str(),
