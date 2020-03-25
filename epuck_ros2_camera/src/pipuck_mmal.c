@@ -68,7 +68,7 @@ void pipuck_mmal_init(pipuck_mmal_t *pipuck_mmal) {
   bcm_host_init();
   vcos_init();
   vcos_semaphore_create(&(pipuck_mmal->internal.semaphore), "sync", 1);
-  status = mmal_component_create(pipuck_mmal->component, &(context->encoder));
+  MMAL_STATUS_T  status = mmal_component_create(pipuck_mmal->component, &(context->encoder));
   assert(status == MMAL_SUCCESS);
   context->encoder->control->userdata = (void *)pipuck_mmal;
   status = mmal_port_enable(context->encoder->control, release_buffer_callback);
