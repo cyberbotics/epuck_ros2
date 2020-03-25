@@ -29,6 +29,9 @@ setup(
     license='Apache License, Version 2.0',
     tests_require=['pytest'],
     entry_points={
-        'console_scripts': ['epuck2_driver = epuck_ros2.epuck2_driver:main', 'camera_calibration = epuck_ros2.camera_calibration:main'],
+        'console_scripts': [
+            'epuck2_driver = epuck_ros2.epuck2_driver:main',
+            'camera_calibration = epuck_ros2.camera_calibration:main'
+        ],
     }
 )

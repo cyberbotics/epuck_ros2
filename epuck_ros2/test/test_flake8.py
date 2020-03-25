@@ -19,5 +19,6 @@ import pytest
 @pytest.mark.flake8
 @pytest.mark.linter
 def test_flake8():
-    rc = main(argv=['--exclude', './epuck_ros2/controller'])
+    rc = main(argv=['--exclude', './epuck_ros2/controller',
+                    '--linelength', '128'])
     assert rc == 0, 'Found errors'

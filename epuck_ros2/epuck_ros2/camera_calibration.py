@@ -35,8 +35,10 @@ class CameraCalibration(Node):
         self.create_subscription(
             Image, '/image_raw', self.on_image_received, 1)
 
-        self.expected_points = np.zeros((CHECKERBOARD_HEIGHT*CHECKERBOARD_WIDTH,3), np.float32)
-        self.expected_points[:,:2] = np.mgrid[0:CHECKERBOARD_WIDTH, 0:CHECKERBOARD_HEIGHT].T.reshape(-1,2)
+        self.expected_points = np.zeros(
+            (CHECKERBOARD_HEIGHT*CHECKERBOARD_WIDTH, 3), np.float32)
+        self.expected_points[:, :2] = np.mgrid[0:CHECKERBOARD_WIDTH,
+                                               0:CHECKERBOARD_HEIGHT].T.reshape(-1, 2)
         self.expected_points = self.expected_points * RECTANGLE_WIDTH
 
         self.object_points = []
