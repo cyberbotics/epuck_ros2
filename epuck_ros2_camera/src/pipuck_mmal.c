@@ -60,7 +60,6 @@ void pipuck_mmal_create(pipuck_mmal_t *pipuck_mmal) {
 }
 
 void pipuck_mmal_init(pipuck_mmal_t *pipuck_mmal) {
-  MMAL_STATUS_T status;
   pipuck_image_t *input_image = &(pipuck_mmal->input);
   pipuck_image_t *output_image = &(pipuck_mmal->output);
   pipuck_mmal_internal_t *context = &(pipuck_mmal->internal);
