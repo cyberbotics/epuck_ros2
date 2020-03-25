@@ -61,7 +61,7 @@ public:
       RCLCPP_INFO(this->get_logger(), "Calibration file '%s' is missing", cameraInfoUrl.c_str());
     else {
       mCameraInfoMsg = cameraInfoManager.getCameraInfo();
-      RCLCPP_INFO(this->get_logger(), "Calibration calibrated from file %s", cameraInfoUrl.c_str());
+      RCLCPP_INFO(this->get_logger(), "Calibration calibrated from file '%s'", cameraInfoUrl.c_str());
     }
 
     // Configure the camera
