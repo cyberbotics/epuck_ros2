@@ -117,21 +117,20 @@ private:
   }
 
   void timerCallback() {
-    auto stamp = now();
-
-    // Initialize V4L2 if needed
+    // Uninitialize V4L2 if needed
     if (mPublisherCompressed->get_subscription_count() == 0 && mPublisherRaw->get_subscription_count() == 0) {
       deinitV4l2();
       return;
-    } else {
-      // Capture an image
-      initV4l2();
-      pipuck_v4l2_capture(&(mPipuckMmalRgb.input));
-
-      // Publish camera info
-      mCameraInfoMsg.header.stamp = stamp;
-      mPublisherCameraInfo->publish(mCameraInfoMsg);
     }
+
+    // Capture an image
+    initV4l2();
+    pipuck_v4l2_capture(&(mPipuckMmalRgb.input));
+    auto stamp = now();
+
+    // Publish camera info
+    mCameraInfoMsg.header.stamp = stamp;
+    mPublisherCameraInfo->publish(mCameraInfoMsg);
 
     // Publish RAW RGB image if needed
     if (mPublisherRaw->get_subscription_count() > 0) {
