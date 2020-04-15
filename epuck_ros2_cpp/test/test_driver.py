@@ -262,22 +262,22 @@ class TestController(unittest.TestCase):
             condition, 'The node hasn\'t published any distance measurement')
 
     def test_laser_scan(self, launch_service, proc_output):
-        write_params_to_i2c({'ps3': 120})
+        write_params_to_i2c({'ps3': 1465.73})
         condition = check_topic_condition(
             self.node,
             LaserScan,
             'scan',
-            lambda msg: abs(msg.ranges[0] - 0.05 -
-                            DISTANCE_FROM_CENTER) < 1E-3)
+            lambda msg: abs(msg.ranges[0] - 0.01 -
+                            DISTANCE_FROM_CENTER) < 1E-2)
         self.assertTrue(
             condition, 'Sensor ps3 at -150 doesn\'t give a good results')
 
-        write_params_to_i2c({'ps2': 120})
+        write_params_to_i2c({'ps2': 1465.73})
         condition = check_topic_condition(
             self.node,
             LaserScan,
             'scan',
-            lambda msg: abs(msg.ranges[4] - 0.05 - DISTANCE_FROM_CENTER) < 1E-3
+            lambda msg: abs(msg.ranges[4] - 0.01 - DISTANCE_FROM_CENTER) < 1E-2
         )
         self.assertTrue(
             condition, 'Sensor ps2 at -90 doesn\'t give a good results')

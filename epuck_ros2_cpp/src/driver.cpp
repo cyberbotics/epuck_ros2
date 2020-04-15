@@ -66,7 +66,7 @@ extern "C" {
 #define ENCODER_RESOLUTION 1000.0f
 #define ODOM_OVERFLOW_GRACE_TICKS 2000
 #define GROUND_SENSOR_ADDRESS 0x60
-#define INFRARED_MAX_RANGE 0.04f
+#define INFRARED_MAX_RANGE 0.025f
 #define INFRARED_MIN_RANGE 0.009f
 #define TOF_MAX_RANGE 1.0f
 #define TOF_MIN_RANGE 0.005f
@@ -381,6 +381,7 @@ private:
   void publishDistanceData(rclcpp::Time &stamp) {
     // Decode measurements
     static float dist[NB_INFRARED_SENSORS];
+    static float laser_dists[NB_INFRARED_SENSORS];
     float distTof = OUT_OF_RANGE;
     for (int i = 0; i < NB_INFRARED_SENSORS; i++) {
       const int distanceIntensity =
@@ -392,6 +393,9 @@ private:
       distTof = tofReadDistance() / 1000.0f;
 
     // Create LaserScan message
+    for (int i = 0; i < NB_INFRARED_SENSORS; i++)
+      laser_dists[i] = (dist[i] > INFRARED_MAX_RANGE) ? OUT_OF_RANGE : dist[i];
+
     auto msg = sensor_msgs::msg::LaserScan();
     msg.header.frame_id = "laser_scanner";
     msg.header.stamp = stamp;
@@ -400,29 +404,29 @@ private:
     msg.angle_increment = 15 * M_PI / 180.0;
     msg.scan_time = PERIOD_S;
     msg.range_min = INFRARED_MIN_RANGE + SENSOR_DIST_FROM_CENTER;
-    msg.range_max = INFRARED_MAX_RANGE + SENSOR_DIST_FROM_CENTER;
+    msg.range_max = TOF_MAX_RANGE + SENSOR_DIST_FROM_CENTER;
     msg.ranges = std::vector<float>{
-      dist[3] + SENSOR_DIST_FROM_CENTER,  // -150
-      OUT_OF_RANGE,                       // -135
-      OUT_OF_RANGE,                       // -120
-      OUT_OF_RANGE,                       // -105
-      dist[2] + SENSOR_DIST_FROM_CENTER,  // -90
-      OUT_OF_RANGE,                       // -75
-      OUT_OF_RANGE,                       // -60
-      dist[1] + SENSOR_DIST_FROM_CENTER,  // -45
-      OUT_OF_RANGE,                       // -30
-      dist[0] + SENSOR_DIST_FROM_CENTER,  // -15
-      distTof + SENSOR_DIST_FROM_CENTER,  // 0
-      dist[7] + SENSOR_DIST_FROM_CENTER,  // 15
-      OUT_OF_RANGE,                       // 30
-      dist[6] + SENSOR_DIST_FROM_CENTER,  // 45
-      OUT_OF_RANGE,                       // 60
-      OUT_OF_RANGE,                       // 75
-      dist[5] + SENSOR_DIST_FROM_CENTER,  // 90
-      OUT_OF_RANGE,                       // 105
-      OUT_OF_RANGE,                       // 120
-      OUT_OF_RANGE,                       // 135
-      dist[4] + SENSOR_DIST_FROM_CENTER,  // 150
+      laser_dists[3] + SENSOR_DIST_FROM_CENTER,  // -150
+      OUT_OF_RANGE,                              // -135
+      OUT_OF_RANGE,                              // -120
+      OUT_OF_RANGE,                              // -105
+      laser_dists[2] + SENSOR_DIST_FROM_CENTER,  // -90
+      OUT_OF_RANGE,                              // -75
+      OUT_OF_RANGE,                              // -60
+      laser_dists[1] + SENSOR_DIST_FROM_CENTER,  // -45
+      OUT_OF_RANGE,                              // -30
+      laser_dists[0] + SENSOR_DIST_FROM_CENTER,  // -15
+      distTof + SENSOR_DIST_FROM_CENTER,         // 0
+      laser_dists[7] + SENSOR_DIST_FROM_CENTER,  // 15
+      OUT_OF_RANGE,                              // 30
+      laser_dists[6] + SENSOR_DIST_FROM_CENTER,  // 45
+      OUT_OF_RANGE,                              // 60
+      OUT_OF_RANGE,                              // 75
+      laser_dists[5] + SENSOR_DIST_FROM_CENTER,  // 90
+      OUT_OF_RANGE,                              // 105
+      OUT_OF_RANGE,                              // 120
+      OUT_OF_RANGE,                              // 135
+      laser_dists[4] + SENSOR_DIST_FROM_CENTER,  // 150
     };
     mLaserPublisher->publish(msg);
 
