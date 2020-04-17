@@ -3,6 +3,9 @@ FROM ubuntu:18.04
 # Install dependencies
 RUN apt-get update
 RUN apt-get install -y \
+    wget \
+    build-essential \
+    autoconf \
     git \
     bison \
     cvs \
@@ -11,14 +14,16 @@ RUN apt-get install -y \
     texinfo \
     automake \
     libtool \
+    libtool-bin \
     make \
     tar \
     xz-utils \
     unzip \
     help2man \
     gawk \
-    libtool-bin \
-    libncurses-dev
+    libncurses5-dev \
+    python3-dev \
+    python3-distutils
 
 # Add user
 RUN useradd -m develop
@@ -31,19 +36,19 @@ WORKDIR /home/develop
 RUN git clone --single-branch --depth 1 https://github.com/crosstool-ng/crosstool-ng.git
 WORKDIR /home/develop/crosstool-ng
 RUN ./bootstrap
-RUN ./configure --prefix=/home/develop/.local
+RUN ./configure --enable-local
 RUN make -j8
-RUN make install
-ENV PATH=/home/develop/.local/bin:$PATH
+ENV PATH=$PATH:/home/develop/crosstool-ng
 
 # Build a toolchain
 WORKDIR /home/develop
 RUN mkdir /home/develop/toolchain && mkdir /home/develop/src
 WORKDIR /home/develop/toolchain
-COPY crosstool.config .config
-
-RUN ct-ng build --help
+COPY crosstool.config crosstool.config
+ENV DEFCONFIG=/home/develop/toolchain/crosstool.config
+RUN ct-ng defconfig
 RUN ct-ng build || { cat build.log && false; } && rm -rf .build
-# ENV TOOLCHAIN_PATH=/home/develop/x-tools/armv6-rpi-linux-gnueabi
-# ENV PATH=${TOOLCHAIN_PATH}/bin:$PATH
-# WORKDIR /home/develop
+ENV TOOLCHAIN_PATH=/home/develop/x-tools/armv6-rpi-linux-gnueabi
+ENV PATH=${TOOLCHAIN_PATH}/bin:$PATH
+
+# TODO
