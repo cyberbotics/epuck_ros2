@@ -73,3 +73,5 @@ RUN vcs import ${ROS_PACKAGE_PATH} < /tmp/rospkgs.repos
 # ROS2 compilation
 COPY rpi_toolchain.cmake rpi_toolchain.cmake
 RUN mkdir /home/develop/sysroot
+COPY test.c test.c
+
