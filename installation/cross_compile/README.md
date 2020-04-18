@@ -39,6 +39,10 @@ colcon build \
     -DBUILD_TESTING:BOOL=OFF
 ```
 
+```
+cmake . -DCMAKE_TOOLCHAIN_FILE=/home/develop/ros2_ws/rpi_toolchain.cmake
+```
+
 
 ```
 armv6-rpi-linux-gnueabi-gcc test.c --sysroot=/home/develop/sysroot/ \
