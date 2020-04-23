@@ -3,9 +3,7 @@
 [![license - apache 2.0](https://img.shields.io/:license-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Version](https://img.shields.io/github/v/tag/cyberbotics/epuck_ros2?label=version)](http://wiki.ros.org/epuck_ros2)
 
-<div align="center">
-  <img src="./assets/pi-puck.jpg" width="400px" />
-</div>
+<img src="./assets/pi-puck.jpg" width="400px" />
 
 This ROS2 package adds support for [e-puck](https://www.gctronic.com/doc/index.php/e-puck2) physical robot with [Pi-puck extension](https://www.gctronic.com/doc/index.php?title=Pi-puck).
 Please use the following links for the instructions:
