@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef EPUCK_ROS2_CPP__I2C_WRAPPER_HPP_
-#define EPUCK_ROS2_CPP__I2C_WRAPPER_HPP_
+#ifndef EPUCK_ROS2_DRIVER__I2C_WRAPPER_HPP_
+#define EPUCK_ROS2_DRIVER__I2C_WRAPPER_HPP_
 
 extern "C" {
 #include <fcntl.h>
@@ -110,4 +110,4 @@ private:
   int mFile;
 };
 
-#endif  // EPUCK_ROS2_CPP__I2C_WRAPPER_HPP_
+#endif  // EPUCK_ROS2_DRIVER__I2C_WRAPPER_HPP_

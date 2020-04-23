@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(epuck_ros2_cpp)
+project(epuck_ros2_driver)
 
 if(NOT CMAKE_C_STANDARD)
   set(CMAKE_C_STANDARD 99)

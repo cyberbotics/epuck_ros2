@@ -154,9 +154,9 @@ def generate_test_description():
     Launch decription configuration.
 
     To run the tests you can use either `launch_test` directly as:
-    $ launch_test src/epuck_ros2/epuck_ros2_cpp/test/test_driver.py
+    $ launch_test src/epuck_ros2/epuck_ros2_driver/test/test_driver.py
     or `colcon`:
-    $ colcon test --packages-select epuck_ros2_cpp
+    $ colcon test --packages-select epuck_ros2_driver
 
     The testing procedure is based on `launch_test`:
     https://github.com/ros2/launch/tree/master/launch_testing
@@ -170,7 +170,7 @@ def generate_test_description():
         f.write(bytearray([0] * 6))
 
     controller = launch_ros.actions.Node(
-        package='epuck_ros2_cpp',
+        package='epuck_ros2_driver',
         node_executable='driver',
         output='screen',
         arguments=['--type', 'test']

@@ -37,8 +37,8 @@ extern "C" {
 #include "vl53l0x/tof.h"
 }
 
-#include "epuck_ros2_cpp/i2c_wrapper.hpp"
-#include "epuck_ros2_cpp/mpu9250.hpp"
+#include "epuck_ros2_driver/i2c_wrapper.hpp"
+#include "epuck_ros2_driver/mpu9250.hpp"
 #include "geometry_msgs/msg/quaternion.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include "geometry_msgs/msg/twist.hpp"

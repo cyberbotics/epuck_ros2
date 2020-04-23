@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "epuck_ros2_cpp/mpu9250.hpp"
+#include "epuck_ros2_driver/mpu9250.hpp"
 
 #include <cmath>
 
