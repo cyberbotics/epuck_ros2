@@ -11,6 +11,9 @@
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>
 
+  <exec_depend>epuck_ros2_driver</exec_depend>
+  <exec_depend>epuck_ros2_camera</exec_depend>
+
   <export>
     <build_type>ament_python</build_type>
   </export>
