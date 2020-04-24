@@ -7,7 +7,7 @@
 
 This ROS2 package adds support for the [e-puck](https://www.gctronic.com/doc/index.php/e-puck2) physical robot with [Pi-puck extension](https://www.gctronic.com/doc/index.php?title=Pi-puck).
 Please use the following links for the instructions:
-- [Installation](https://github.com/cyberbotics/epuck_ros2/tree/master/installation)
+- [Installation](../installation/README.md)
 - [Getting Started](#getting-started)
 - [Examples](https://github.com/cyberbotics/webots_ros2/blob/doc-epuck-refactor/webots_ros2_epuck/EPUCK_ROS2.md)
 - [Simulation](https://github.com/cyberbotics/webots_ros2/tree/doc-epuck-refactor/webots_ros2_epuck)
