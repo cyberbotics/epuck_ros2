@@ -2,6 +2,8 @@ language: generic
 services:
   - docker
 env:
+  global:
+    - CMAKE_ARGS="-DAVOID_EPUCK_CAMERA_BUILD=true"
   matrix:
     - ROS_DISTRO="eloquent" DOCKER_RUN_OPTS='-e TRAVIS'
     - ROS_DISTRO="eloquent" DOCKER_RUN_OPTS='-e TRAVIS' ROS_REPO=testing
