@@ -4,4 +4,4 @@ This driver adds ROS2 suport for all sensors and actuators available on e-puck r
 ros2 run epuck_ros2_driver driver
 ```
 
-For more detailed instructions please check the [examples](https://github.com/cyberbotics/webots_ros2/blob/doc-epuck-refactor/webots_ros2_epuck/EPUCK_ROS2.md).
+For more detailed instructions please check the [examples](https://github.com/cyberbotics/webots_ros2/blob/master/webots_ros2_epuck/EPUCK_ROS2.md).
