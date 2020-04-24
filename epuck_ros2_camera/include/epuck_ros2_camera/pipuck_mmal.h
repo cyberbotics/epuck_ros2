@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _PIPUCK_MMAL_H_
-#define _PIPUCK_MMAL_H_
+#ifndef EPUCK_ROS2_CAMERA__PIPUCK_MMAL_H_
+#define EPUCK_ROS2_CAMERA__PIPUCK_MMAL_H_
 
 #include "epuck_ros2_camera/pipuck_image.h"
 
@@ -21,23 +21,23 @@
 #include <interface/vcos/vcos.h>
 
 typedef struct pipuck_mmal_internal_t_ {
-    MMAL_COMPONENT_T *encoder;
-    MMAL_POOL_T *pool_in;
-    MMAL_POOL_T *pool_out;
-    VCOS_SEMAPHORE_T semaphore;
-    MMAL_QUEUE_T *queue;
+  MMAL_COMPONENT_T *encoder;
+  MMAL_POOL_T *pool_in;
+  MMAL_POOL_T *pool_out;
+  VCOS_SEMAPHORE_T semaphore;
+  MMAL_QUEUE_T *queue;
 } pipuck_mmal_internal_t;
 
 typedef struct pipuck_mmal_t_ {
-    pipuck_image_t input;
-    pipuck_image_t output;
-    char component[25];
-    pipuck_mmal_internal_t internal;
+  pipuck_image_t input;
+  pipuck_image_t output;
+  char component[25];
+  pipuck_mmal_internal_t internal;
 } pipuck_mmal_t;
 
-void pipuck_mmal_init(pipuck_mmal_t* pipuck_mmal);
+void pipuck_mmal_init(pipuck_mmal_t *pipuck_mmal);
 void pipuck_mmal_create(pipuck_mmal_t *pipuck_mmal);
-void pipuck_mmal_convert(pipuck_mmal_t* pipuck_mmal);
-void pipuck_mmal_deinit(pipuck_mmal_t* pipuck_mmal);
+void pipuck_mmal_convert(pipuck_mmal_t *pipuck_mmal);
+void pipuck_mmal_deinit(pipuck_mmal_t *pipuck_mmal);
 
-#endif
+#endif  // EPUCK_ROS2_CAMERA__PIPUCK_MMAL_H_

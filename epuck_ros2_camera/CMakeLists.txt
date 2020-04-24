@@ -21,7 +21,7 @@ find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(camera_info_manager REQUIRED)
 
-if (NOT AVOID_EPUCK_CAMERA_BUILD)
+if(NOT AVOID_EPUCK_CAMERA_BUILD)
   set(MMAL_LIBS
     pthread
     /opt/vc/lib/libbcm_host.so
@@ -69,8 +69,38 @@ if (NOT AVOID_EPUCK_CAMERA_BUILD)
 endif()
 
 if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
-  ament_lint_auto_find_test_dependencies()
+  find_package(launch_testing_ament_cmake REQUIRED)
+  find_package(ament_cmake_cppcheck REQUIRED)
+  find_package(ament_cmake_cpplint REQUIRED)
+  find_package(ament_cmake_copyright REQUIRED)
+  find_package(ament_cmake_lint_cmake REQUIRED)
+  find_package(ament_cmake_flake8 REQUIRED)
+  find_package(ament_cmake_pep257 REQUIRED)
+  find_package(ament_cmake_xmllint REQUIRED)
+  find_package(ament_cmake_clang_format REQUIRED)
+  set(PACKAGE_CPP_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
+  )
+
+  ament_cppcheck(
+    ARGN ${PACKAGE_CPP_FILES}
+  )
+  ament_cpplint(
+    ARGN ${PACKAGE_CPP_FILES}
+    MAX_LINE_LENGTH 128
+  )
+  ament_copyright(
+    ARGN ${PACKAGE_CPP_FILES}
+  )
+  ament_lint_cmake()
+  ament_flake8()
+  ament_pep257()
+  ament_xmllint()
+  ament_clang_format(
+    ARGN ${PACKAGE_CPP_FILES}
+    CONFIG_FILE "${CMAKE_CURRENT_SOURCE_DIR}/../.clang-format"
+  )
 endif()
 
 ament_package()
