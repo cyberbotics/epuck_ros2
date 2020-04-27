@@ -21,13 +21,13 @@ source $HOME/ros2_ws/install/local_setup.bash
 
 Then, launch the driver:
 ```
-ros2 launch webots_ros2_epuck2 example_launch.py
+ros2 launch webots_ros2_epuck2 robot_launch.py
 ```
 This command will activate a ROS2 node with support for all sensors and actuators available on the e-puck except the camera.
 We consider the camera node be heavy for device such as Raspberry Pi Zero W and therefore it is not included by default.
 You can activate the camera node as:
 ```
-ros2 launch webots_ros2_epuck2 example_launch.py camera:=true
+ros2 launch webots_ros2_epuck2 robot_launch.py camera:=true
 ```
 
 Your robot should be ready now and you can check examples [here](https://github.com/cyberbotics/webots_ros2/blob/master/webots_ros2_epuck/EPUCK_ROS2.md).
