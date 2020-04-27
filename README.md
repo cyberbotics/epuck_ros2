@@ -13,7 +13,7 @@ Please use the following links for the instructions:
 - [Simulation](https://github.com/cyberbotics/webots_ros2/tree/master/webots_ros2_epuck)
 
 ## Getting Started
-Make sure you followed the [installation tutorial](./installation), so you have ROS2 and `epuck_ros2` installed on your robot.
+Make sure you followed the [installation tutorial](../installation/README.md), so you have ROS2 and `epuck_ros2` installed on your robot.
 If everything properly installed you should be able to source your ROS2 workspace:
 ```
 source $HOME/ros2_ws/install/local_setup.bash
