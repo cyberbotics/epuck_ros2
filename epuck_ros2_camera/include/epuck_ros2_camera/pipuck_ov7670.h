@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef PIPUCK_OV7670_H
-#define PIPUCK_OV7670_H
+#ifndef EPUCK_ROS2_CAMERA__PIPUCK_OV7670_H_
+#define EPUCK_ROS2_CAMERA__PIPUCK_OV7670_H_
 
 int pipuck_ov7670_init(void);
 
-#endif
+#endif  // EPUCK_ROS2_CAMERA__PIPUCK_OV7670_H_

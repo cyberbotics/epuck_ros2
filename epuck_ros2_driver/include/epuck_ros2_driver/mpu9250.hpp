@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef EPUCK_ROS2_CPP__MPU9250_HPP_
-#define EPUCK_ROS2_CPP__MPU9250_HPP_
+#ifndef EPUCK_ROS2_DRIVER__MPU9250_HPP_
+#define EPUCK_ROS2_DRIVER__MPU9250_HPP_
 
 #include <inttypes.h>
 #include <memory>
 #include <vector>
 
-#include "epuck_ros2_cpp/i2c_wrapper.hpp"
+#include "epuck_ros2_driver/i2c_wrapper.hpp"
 
 class MPU9250 {
 public:
@@ -44,4 +44,4 @@ private:
   std::shared_ptr<I2CWrapper> mI2c;
 };
 
-#endif  // EPUCK_ROS2_CPP__MPU9250_HPP_
+#endif  // EPUCK_ROS2_DRIVER__MPU9250_HPP_

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef PIPUCK_IMAGE_H
-#define PIPUCK_IMAGE_H
+#ifndef EPUCK_ROS2_CAMERA__PIPUCK_IMAGE_H_
+#define EPUCK_ROS2_CAMERA__PIPUCK_IMAGE_H_
 
 typedef struct _pipuck_image_t {
   int width;
@@ -24,4 +24,4 @@ typedef struct _pipuck_image_t {
   int quality;
 } pipuck_image_t;
 
-#endif
+#endif  // EPUCK_ROS2_CAMERA__PIPUCK_IMAGE_H_

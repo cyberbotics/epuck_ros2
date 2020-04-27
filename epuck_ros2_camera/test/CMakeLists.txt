@@ -1,6 +1,8 @@
 # Build test examples for e-puck2 camera
-# - `v4l2_to_rgb24.cpp` reads from V4L2 and convert to JPEG and RGB (`cmake -DBUILD_OPENCV_TEST:BOOL=false .`)
-# - `cv_to_jpeg.cpp` reads from file using OpenCV and converts to JPEG (`cmake -DBUILD_OPENCV_TEST:BOOL=true .`)
+# - `v4l2_to_rgb24.cpp` reads from V4L2 and convert to JPEG and RGB
+#   - command: `cmake -DBUILD_OPENCV_TEST:BOOL=false .`
+# - `cv_to_jpeg.cpp` reads from file using OpenCV and converts to JPEG
+#   - command: `cmake -DBUILD_OPENCV_TEST:BOOL=true .`
 
 cmake_minimum_required(VERSION 3.5)
 project(pipuck_tests)

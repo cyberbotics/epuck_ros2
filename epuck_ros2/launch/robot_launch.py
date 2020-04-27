@@ -16,13 +16,28 @@
 
 """Launch E-Puck controller."""
 
+import launch
+from launch.substitutions import LaunchConfiguration
 from launch import LaunchDescription
 from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    # Controller node
-    controller = Node(package='epuck_ros2',
-                      node_executable='epuck2_driver', output='screen')
+    use_camera = LaunchConfiguration('camera', default=False)
 
-    return LaunchDescription([controller])
+    driver = Node(
+        package='epuck_ros2_driver',
+        node_executable='driver',
+        output='screen'
+    )
+    camera = Node(
+        package='epuck_ros2_camera',
+        node_executable='camera',
+        output='screen',
+        condition=launch.conditions.IfCondition(use_camera)
+    )
+
+    return LaunchDescription([
+        driver,
+        camera
+    ])

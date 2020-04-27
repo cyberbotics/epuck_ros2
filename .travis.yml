@@ -2,11 +2,12 @@ language: generic
 services:
   - docker
 env:
+  global:
+    - CMAKE_ARGS="-DAVOID_EPUCK_CAMERA_BUILD=true"
   matrix:
     - ROS_DISTRO="eloquent" DOCKER_RUN_OPTS='-e TRAVIS'
     - ROS_DISTRO="eloquent" DOCKER_RUN_OPTS='-e TRAVIS' ROS_REPO=testing
 install:
   - git clone --quiet --depth 1 https://github.com/ros-industrial/industrial_ci.git .industrial_ci -b master
 script:
-  - touch epuck_ros2_camera/COLCON_IGNORE
   - .industrial_ci/travis.sh
