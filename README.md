@@ -5,15 +5,15 @@
 
 <img src="./assets/pi-puck.jpg" width="400px" />
 
-This ROS2 package adds support for the [e-puck](https://www.gctronic.com/doc/index.php/e-puck2) physical robot with [Pi-puck extension](https://www.gctronic.com/doc/index.php?title=Pi-puck).
+This package adds ROS2 support for the [e-puck](https://www.gctronic.com/doc/index.php/e-puck2) physical robot with [Pi-puck extension](https://www.gctronic.com/doc/index.php?title=Pi-puck).
 Please use the following links for the instructions:
-- [Installation](../installation/README.md)
+- [Installation](./installation/README.md)
 - [Getting Started](#getting-started)
 - [Examples](https://github.com/cyberbotics/webots_ros2/blob/master/webots_ros2_epuck/EPUCK_ROS2.md)
 - [Simulation](https://github.com/cyberbotics/webots_ros2/tree/master/webots_ros2_epuck)
 
 ## Getting Started
-Make sure you followed the [installation tutorial](../installation/README.md), so you have ROS2 and `epuck_ros2` installed on your robot.
+Make sure you followed the [installation tutorial](./installation/README.md), so you have ROS2 and `epuck_ros2` installed on your robot.
 If everything properly installed you should be able to source your ROS2 workspace:
 ```
 source $HOME/ros2_ws/install/local_setup.bash
