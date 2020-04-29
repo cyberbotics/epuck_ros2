@@ -8,7 +8,7 @@ rsync -v --copy-unsafe-links --progress -r pi@raspberrypi.local:/{lib,usr,opt/vc
 ```
 or
 ```
-sudo sshfs -o follow_symlinks,allow_other pi@raspberrypi.local:/ $HOME/rpi
+sudo sshfs -o follow_symlinks,allow_other -o cache_timeout=115200 pi@raspberrypi.local:/ $HOME/rpi
 ```
 you may need:
 ```
@@ -28,7 +28,6 @@ docker run -it -v $HOME/rpi:/home/develop/sysroot armv6-ros2-toolchain /bin/bash
 ## Commands
 ```
 colcon build \
-  --packages-select fastcdr \
   --executor sequential \
   --merge-install \
   --cmake-clean-cache \
