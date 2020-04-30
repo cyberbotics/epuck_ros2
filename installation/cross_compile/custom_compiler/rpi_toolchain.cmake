@@ -10,33 +10,28 @@ set(SYSROOT_PATH /home/develop/sysroot)
 set(CMAKE_C_COMPILER ${TOOLCHAIN_PATH}/bin/armv6-rpi-linux-gnueabi-gcc)
 set(CMAKE_CXX_COMPILER ${TOOLCHAIN_PATH}/bin/armv6-rpi-linux-gnueabi-g++)
 
-set(OBJECT_LIBS "")
-set(OBJECT_LIBS "${OBJECT_LIBS} ${SYSROOT_PATH}/usr/lib/arm-linux-gnueabihf/crt1.o")
-set(OBJECT_LIBS "${OBJECT_LIBS} ${SYSROOT_PATH}/usr/lib/arm-linux-gnueabihf/crti.o")
-set(OBJECT_LIBS "${OBJECT_LIBS} ${SYSROOT_PATH}/usr/lib/gcc/arm-linux-gnueabihf/8/crtbegin.o")
-set(OBJECT_LIBS "${OBJECT_LIBS} ${SYSROOT_PATH}/usr/lib/gcc/arm-linux-gnueabihf/8/crtend.o")
-set(OBJECT_LIBS "${OBJECT_LIBS} ${SYSROOT_PATH}/lib/arm-linux-gnueabihf/libgcc_s.so.1")
-set(OBJECT_LIBS "${OBJECT_LIBS} ${SYSROOT_PATH}/lib/arm-linux-gnueabihf/libc.so.6")
-set(OBJECT_LIBS "${OBJECT_LIBS} ${SYSROOT_PATH}/usr/lib/arm-linux-gnueabihf/libc_nonshared.a")
-set(OBJECT_LIBS "${OBJECT_LIBS} ${SYSROOT_PATH}/lib/arm-linux-gnueabihf/ld-linux-armhf.so.3")
-set(OBJECT_LIBS "${OBJECT_LIBS} ${SYSROOT_PATH}/usr/lib/arm-linux-gnueabihf/crtn.o")
-set(OBJECT_LIBS "${OBJECT_LIBS} ${SYSROOT_PATH}/lib/arm-linux-gnueabihf/libm.so.6")
-set(INCLUDE_DIRS "${INCLUDE_DIRS} ${SYSROOT_PATH}/usr/include/arm-linux-gnueabihf/")
+link_directories(
+    "${SYSROOT_PATH}/lib/"
+    "${SYSROOT_PATH}/usr/lib/"
+    "${SYSROOT_PATH}/lib/arm-linux-gnueabihf/"
+    "${SYSROOT_PATH}/usr/lib/arm-linux-gnueabihf/"
+)
+
+include_directories(
+    "${SYSROOT_PATH}/usr/include/arm-linux-gnueabihf"
+)
 
 set(CMAKE_C_FLAGS "")
-
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -L${SYSROOT_PATH}/lib/")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -L${SYSROOT_PATH}/usr/lib/")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -L${SYSROOT_PATH}/lib/arm-linux-gnueabihf/")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -L${SYSROOT_PATH}/usr/lib/arm-linux-gnueabihf/")
-
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -nostdlib")
+# set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -nostdlib")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -nodefaultlibs")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -nostartfiles")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-use-cxa-atexit")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcpu=arm1176jzf-s")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mfpu=vfp")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mfloat-abi=hard")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -marm")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wl,-t ${OBJECT_LIBS}")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I${INCLUDE_DIRS}")
+# set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${INCLUDE_DIRS}")
+# set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wl,-dynamic-linker ${OBJECT_LIBS}")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}" CACHE STRING "Flags for Raspberry Pi Zero")
 set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS}" CACHE STRING "Flags for Raspberry Pi Zero")
 

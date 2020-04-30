@@ -35,7 +35,7 @@ RUN vcs import ${ROS_PACKAGE_PATH} < /tmp/rospkgs.repos
 
 # Toolchain
 WORKDIR /home/develop
-RUN wget -O raspi-toolchain.tar.gz https://www.dropbox.com/s/j3xg8sjn4qohwkj/raspi-toolchain.tar.gz?dl=0
+RUN wget -O raspi-toolchain.tar.gz https://liquidtelecom.dl.sourceforge.net/project/raspberry-pi-cross-compilers/Raspberry%20Pi%20GCC%20Cross-Compiler%20Toolchains/Buster/GCC%208.3.0/Raspberry%20Pi%201%2C%20Zero/cross-gcc-8.3.0-pi_0-1.tar.gz
 RUN tar -xvf raspi-toolchain.tar.gz && rm raspi-toolchain.tar.gz
 
 # Compile

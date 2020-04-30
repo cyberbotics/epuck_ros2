@@ -71,7 +71,12 @@ RUN rosinstall_generator ros_core --deps --exclude RPP --rosdistro eloquent > /t
 RUN vcs import ${ROS_PACKAGE_PATH} < /tmp/rospkgs.repos
 
 # ROS2 compilation
-COPY rpi_toolchain.cmake rpi_toolchain.cmake
+COPY bashrc.sh bashrc.sh
+RUN cat bashrc.sh >> $HOME/.bashrc
 RUN mkdir /home/develop/sysroot
-# COPY test.c test.c
+
+# COPY rpi_toolchain.cmake rpi_toolchain.cmake
+
+
+# COPY verify.c verify.c
 # COPY CMakeLists.txt CMakeLists.txt

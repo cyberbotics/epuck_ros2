@@ -4,11 +4,11 @@ scp pi@raspberrypi.local:/usr/lib/arm-linux-gnueabihf/{libz.so,libpcre.so} /usr/
 ```
 
 ```
-rsync -v --copy-unsafe-links --progress -r pi@raspberrypi.local:/{lib,usr,opt/vc/lib} $HOME/rpi
+rsync -rzLR --safe-links pi@raspberrypi.local:/{lib,usr,opt/vc/lib} $HOME/rpi
 ```
 or
 ```
-sudo sshfs -o follow_symlinks,allow_other -o cache_timeout=115200 pi@raspberrypi.local:/ $HOME/rpi
+sshfs -o follow_symlinks,allow_other -o cache_timeout=115200 pi@raspberrypi.local:/ $HOME/rpi
 ```
 you may need:
 ```
@@ -22,7 +22,7 @@ docker build . -t armv6-ros2-toolchain
 ```
 and run tty as:
 ```
-docker run -it -v $HOME/rpi:/home/develop/sysroot armv6-ros2-toolchain /bin/bash
+docker run -it -v $HOME/rpi:/home/develop/sysroot --mount type=bind,src=$(pwd)/rpi_toolchain.cmake,dst=/home/develop/ros2_ws/rpi_toolchain.cmake armv6-ros2-toolchain /bin/bash
 ```
 
 ## Commands
@@ -44,8 +44,9 @@ cmake . -DCMAKE_TOOLCHAIN_FILE=/home/develop/ros2_ws/rpi_toolchain.cmake
 
 
 ```
-armv6-rpi-linux-gnueabi-gcc test.c --sysroot=/home/develop/sysroot/ \
+armv6-rpi-linux-gnueabi-gcc verify.c --sysroot=/home/develop/sysroot/ \
   -I/home/develop/sysroot/usr/include/arm-linux-gnueabihf \
+  -I/home/develop/sysroot/usr/include \
   -nostdlib -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=hard -marm \
   -Wl,-t  \
   /home/develop/sysroot/usr/lib/arm-linux-gnueabihf/crt1.o \
