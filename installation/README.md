@@ -16,9 +16,10 @@ It is a very important device correct output device, it is usually named as `/de
 To check whether the block device is associated with the SD card you can run before SD card is inserted `ls /dev/sd*`, insert SD card, run the same command again and compare the output.
 More detailed instructions on how to burn an image to SD card for different OS' you can on the following links:
 
-|| Instructions by Raspberry Pi for burning SD card  ||
-|:-------:|:-------:|:---------:|
-| [Windows](https://www.raspberrypi.org/documentation/installation/installing-images/windows.md) | [Mac](https://www.raspberrypi.org/documentation/installation/installing-images/mac.md) | [Linux](https://www.raspberrypi.org/documentation/installation/installing-images/linux.md) |
+> Detailed instructions about burning SD card for 
+[Windows](https://www.raspberrypi.org/documentation/installation/installing-images/windows.md),
+[Mac](https://www.raspberrypi.org/documentation/installation/installing-images/mac.md) and 
+[Linux](https://www.raspberrypi.org/documentation/installation/installing-images/linux.md)
 
 ### Wifi and SSH
 Once the image is burned on SD card you may want to configure wifi connection.
@@ -32,7 +33,7 @@ network={
     key_mgmt=WPA-PSK
 }
 ```
-Please follow check the more detailed instruction [here](https://www.raspberrypi.org/documentation/configuration/wireless/wireless-cli.md).
+> Detailed instructions on wifi configuration can be found [here](https://www.raspberrypi.org/documentation/configuration/wireless/wireless-cli.md).
 
 At this point, you probably want to start the nodes from `epuck_ros2`.
 First, make sure that your pi-puck and computer are connected to the same local network.
