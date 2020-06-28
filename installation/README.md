@@ -8,7 +8,7 @@ Currently, we provide two ways to install ROS2 and `epuck_ros2` e-puck:
 This is the recommended way of installing ROS2 on Pi-puck as all ROS2 compilation issues are resolved by us.
 Moreover, this is very fast as you don't have to wait for the compilation process to finish.
 It is enough to download our image and burn it to SD card that has to be at least 8GB.
-To burn on the image on SD card you can use the following command on Linux:
+To burn the image on the SD card you can use the following command on Linux:
 ```bash
 dd bs=4M if=path_to_pi_puck_image.img of=/dev/sdX conv=fsync
 ```
