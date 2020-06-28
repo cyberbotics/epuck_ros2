@@ -92,7 +92,7 @@ Now, burn the `path_to_pi_puck_image.img` to other SD cards that will be used in
 ## Starting `epuck_ros2` on Boot
 In most of the cases, ROS2 development will take place on your computer and ROS2 will take handle the communication between the local nodes and nodes on the pi-puck.
 In that scenario, you may want to execute `epuck_ros2` as soon as pi-puck boots without manual intervention.
-To this it is enough to populate `/etc/rc.local` with the following:
+To achieve this, it is enough to populate `/etc/rc.local` with the following commands:
 ```bash
 source /home/pi/ros2_ws/install/local_setup.bash
 ros2 launch webots_ros2_epuck2 robot_launch.py
