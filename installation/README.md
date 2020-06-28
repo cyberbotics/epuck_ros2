@@ -59,6 +59,8 @@ source install/local_setup.bash
 ros2 launch webots_ros2_epuck2 robot_launch.py
 ```
 
+---
+
 ## Fresh ROS2 Installation
 In certain use-cases, a user may prefer to install ROS2, `epuck_ros2`, configure the device tree and install dependencies manually.
 Even not recommended, this is the only way to install ROS2 version other than the ones provided by us.
