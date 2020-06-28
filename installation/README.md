@@ -5,7 +5,7 @@ Currently, we provide two ways to install ROS2 and `epuck_ros2` e-puck:
 - [Hard](#fresh-ros2-installation): Fresh ROS2 installation on top of [Raspberry Pi OS (based on Debian Buster)](https://www.raspberrypi.org/downloads/raspberry-pi-os/).
 
 ## Using Pi-puck Image
-This is recommended way of installing ROS2 on Pi-puck as all ROS2 compilation issues are resolved by us.
+This is the recommended way of installing ROS2 on Pi-puck as all ROS2 compilation issues are resolved by us.
 Moreover, this is very fast as you don't have to wait for the compilation process to finish.
 It is enough to download our image and burn it to SD card that has to be at least 8GB.
 To burn on the image on SD card you can use the following command on Linux:
