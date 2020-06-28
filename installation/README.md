@@ -43,7 +43,7 @@ You can ping the pi-puck using:
 ```
 ping raspberrypi.local
 ```
-or if your device doesn't support `mDNS` you will need to use `nmap` to [discover pi-puck's IP address](https://www.raspberrypi.org/documentation/remote-access/ip-address.md).
+Or, if your device doesn't support `mDNS` you will need to use `nmap` to [discover pi-puck's IP address](https://www.raspberrypi.org/documentation/remote-access/ip-address.md).
 
 Then, connect to the pi-puck via SSH:
 ```
