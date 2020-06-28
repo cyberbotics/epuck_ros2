@@ -87,7 +87,7 @@ To shrink the image use the following command:
 curl https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh | sudo bash -s -- path_to_pi_puck_image.img
 ```
 
-Now, burn the `path_to_pi_puck_image.img` to other SD cards that will be used in order pi-pucks.
+Now, burn the `path_to_pi_puck_image.img` to other SD cards that will be used in other pi-pucks.
 
 ## Starting `epuck_ros2` on Boot
 In most of the cases, ROS2 development will take place on your computer and ROS2 will take handle the communication between the local nodes and nodes on the pi-puck.
