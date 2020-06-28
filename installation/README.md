@@ -12,7 +12,7 @@ To burn the image on the SD card you can use the following command on Linux:
 ```bash
 dd bs=4M if=path_to_pi_puck_image.img of=/dev/sdX conv=fsync
 ```
-It is a very important device correct output device, it is usually named as `/dev/sdb` (not `/dev/sdb1`).
+It is very important to correct the output device, it is usually named as `/dev/sdb` (not `/dev/sdb1`).
 To check whether the block device is associated with the SD card you can run before SD card is inserted `ls /dev/sd*`, insert SD card, run the same command again and compare the output.
 More detailed instructions on how to burn an image to SD card for different OS' you can on the following links:
 
