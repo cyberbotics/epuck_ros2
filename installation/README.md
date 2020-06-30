@@ -53,7 +53,7 @@ with `raspberry` as a default password.
 
 > More about SSH and Raspberry Pi can be found [here](https://www.raspberrypi.org/documentation/remote-access/ssh/).
 
-ROS2 installation is located in `/home/pi/ros2_ws`, so you can navigate inside and start `epuck_ros2` driver as:
+ROS2 installation is located in `/home/pi/ros2_ws`, so you can navigate inside and start `epuck_ros2` driver with:
 ```bash
 source install/local_setup.bash
 ros2 launch webots_ros2_epuck2 robot_launch.py
