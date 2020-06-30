@@ -16,7 +16,7 @@ dd bs=4M if=path_to_pi_puck_image.img of=/dev/sdX conv=fsync
 ```
 It is very important to provide a correct output device name, it is usually `/dev/sdb` (not `/dev/sdb1`).
 To check whether the block device is the one associated with the SD card you can run before inserting the SD card `ls /dev/sd*`, then insert the SD card and run the same command again and compare the output.
-For, more detailed instructions on how to burn an image to the SD card for different OS' you can check the following links:
+For more detailed instructions on how to burn an image to the SD card for different operating systems you can check the following links:
 
 > Detailed instructions for burning SD card on:
 [Windows](https://www.raspberrypi.org/documentation/installation/installing-images/windows.md),
