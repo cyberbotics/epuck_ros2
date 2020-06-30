@@ -71,7 +71,7 @@ After the Raspberry Pi OS is booted and you have SSH connection please execute t
 curl https://raw.githubusercontent.com/cyberbotics/epuck_ros2/master/installation/ros-install.sh | sh
 ```
 > Note that this script is in very early stage and it may fail.
-In case of failure try to understand which package has caused the error and check if the community on Github has the solution.
+In case of failure try to understand which package has caused the error and check if the community on GitHub has the solution.
 Also, there are around 200 ROS2 packages and it will take a long time to compile.
 
 The script will install dependencies, download ROS2 locally, compile and configure the device tree necessary for Raspberry Pi to communicate with the e-puck2 base.
