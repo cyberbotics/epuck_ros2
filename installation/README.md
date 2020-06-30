@@ -18,7 +18,7 @@ It is very important to provide a correct output device name, it is usually `/de
 To check whether the block device is the one associated with the SD card you can run before inserting the SD card `ls /dev/sd*`, then insert the SD card and run the same command again and compare the output.
 For, more detailed instructions on how to burn an image to the SD card for different OS' you can check the following links:
 
-> Detailed instructions about burning SD card for 
+> Detailed instructions for burning SD card on:
 [Windows](https://www.raspberrypi.org/documentation/installation/installing-images/windows.md),
 [Mac](https://www.raspberrypi.org/documentation/installation/installing-images/mac.md) and 
 [Linux](https://www.raspberrypi.org/documentation/installation/installing-images/linux.md)
