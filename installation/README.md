@@ -79,7 +79,7 @@ The script will install dependencies, download ROS2 locally, compile and configu
 ### Creating Custom Image
 
 Once the installation is complete, or you developed a custom node, you may want to save the configuration and quickly distribute it to the other robots by creating your own image.
-To achieve that, you can simply put the SD card in your computer and copy the content to `*.img`:
+To achieve that, you can simply put the SD card in your computer and copy its content to a `.img` file:
 ```bash
 dd if=/dev/sdX of=path_to_pi_puck_image.img
 ```
