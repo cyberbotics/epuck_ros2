@@ -24,7 +24,7 @@ For more detailed instructions on how to burn an image to the SD card for differ
 [Linux](https://www.raspberrypi.org/documentation/installation/installing-images/linux.md)
 
 ### Wifi and SSH
-Once the image is burned on SD card you may want to configure wifi connection.
+Once the image is burned on SD card you may want to configure the Wi-Fi connection.
 By default, Pi-puck with the provided image will try to connect to a wifi network with SSID `E-PUCK`.
 If you want to change the default behaviour or to add more networks you can add the networks to `/etc/wpa_supplicant/wpa_supplicant.conf` (file located on the SD card).
 For example:
