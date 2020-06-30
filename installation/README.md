@@ -7,7 +7,7 @@ Currently, we provide two ways to install ROS2 and the `epuck_ros2` package:
 ---
 
 ## Using Pi-puck Image
-This is the recommended way of installing ROS2 on Pi-puck as all ROS2 compilation issues are resolved by us.
+This is the recommended way of installing ROS2 on pi-puck as all ROS2 compilation issues are resolved by us.
 Moreover, this is very fast as you don't have to wait for the compilation process to finish.
 It is enough to download our image and burn it to a SD card that has to be at least 8GB.
 To burn the image on the SD card you can use the following command on Linux:
@@ -25,7 +25,7 @@ For more detailed instructions on how to burn an image to the SD card for differ
 
 ### Wifi and SSH
 Once the image is burned on SD card you may want to configure the Wi-Fi connection.
-By default, the Pi-puck with the provided image will try to connect to a Wi-Fi network with the SSID `E-PUCK`.
+By default, the pi-puck with the provided image will try to connect to a Wi-Fi network with the SSID `E-PUCK`.
 If you want to change the default behavior or to add more networks you can add networks to `/etc/wpa_supplicant/wpa_supplicant.conf` (file located on the SD card).
 For example:
 ```conf
