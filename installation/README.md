@@ -35,7 +35,7 @@ network={
     key_mgmt=WPA-PSK
 }
 ```
-> Detailed instructions on wifi configuration can be found [here](https://www.raspberrypi.org/documentation/configuration/wireless/wireless-cli.md).
+> Detailed instructions on Wi-Fi configuration can be found [here](https://www.raspberrypi.org/documentation/configuration/wireless/wireless-cli.md).
 
 At this point, you probably want to start the nodes from `epuck_ros2`.
 First, make sure that your pi-puck and computer are connected to the same local network.
