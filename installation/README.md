@@ -84,7 +84,7 @@ To achieve that, you can simply put the SD card in your computer and copy the co
 dd if=/dev/sdX of=path_to_pi_puck_image.img
 ```
 The image size will be equal (if expanded before) to your SD card size even though the content of the image is much smaller.
-To shrink the image use the following command:
+To shrink the image, use the following command:
 ```bash
 curl https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh | sudo bash -s -- path_to_pi_puck_image.img
 ```
