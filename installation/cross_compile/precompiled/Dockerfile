@@ -18,7 +18,12 @@ USER root
 RUN apt-get install -y \
     python3-pip \
     git \
-    cmake
+    cmake \
+    gcc-6 \
+    g++-6 \
+    g++-6-arm-linux-gnueabihf
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-6 60 --slave /usr/bin/g++ g++ /usr/bin/g++-6  
+
 USER develop
 RUN pip3 install \
     rosinstall_generator \
@@ -30,16 +35,11 @@ ENV PATH=/home/develop/.local/bin/:$PATH
 RUN mkdir -p /home/develop/ros2_ws/src
 WORKDIR /home/develop/ros2_ws
 ENV ROS_PACKAGE_PATH=/home/develop/ros2_ws/src
-RUN rosinstall_generator ros_core --deps --exclude RPP --rosdistro eloquent > /tmp/rospkgs.repos
-RUN vcs import ${ROS_PACKAGE_PATH} < /tmp/rospkgs.repos
-
-# Toolchain
-WORKDIR /home/develop
-RUN wget -O raspi-toolchain.tar.gz https://liquidtelecom.dl.sourceforge.net/project/raspberry-pi-cross-compilers/Raspberry%20Pi%20GCC%20Cross-Compiler%20Toolchains/Buster/GCC%208.3.0/Raspberry%20Pi%201%2C%20Zero/cross-gcc-8.3.0-pi_0-1.tar.gz
-RUN tar -xvf raspi-toolchain.tar.gz && rm raspi-toolchain.tar.gz
+RUN wget https://raw.githubusercontent.com/ros2/ros2/foxy/ros2.repos
+RUN vcs import ${ROS_PACKAGE_PATH} < ros2.repos
 
 # Compile
 WORKDIR /home/develop/ros2_ws
 COPY rpi_toolchain.cmake rpi_toolchain.cmake
-RUN mkdir /home/develop/sysroot
-COPY test.c test.c
+COPY bashrc.sh bashrc.sh
+RUN cat bashrc.sh >> $HOME/.bashrc
