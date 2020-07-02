@@ -32,6 +32,21 @@ ros2 launch webots_ros2_epuck2 robot_launch.py camera:=true
 
 Your robot should be ready now and you can check examples [here](https://github.com/cyberbotics/webots_ros2/blob/master/webots_ros2_epuck/EPUCK_ROS2.md).
 
+## Development
+If you prefer to compile `epuck_ros2` from the source you can clone the repository to your workspace:
+```
+git clone --recurse-submodules https://github.com/cyberbotics/epuck_ros2.git src/epuck_ros2
+```
+
+Then simply build it with `colcon`:
+```
+colcon build
+```
+Or, if you wish to build it on your PC (that doesn't have MMAL library):
+```
+colcon build --cmake-args -DAVOID_EPUCK_CAMERA_BUILD=true
+```
+
 ## Acknowledgement
 
 <a href="http://rosin-project.eu">
