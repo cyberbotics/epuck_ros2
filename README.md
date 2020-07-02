@@ -38,12 +38,12 @@ If you prefer to compile `epuck_ros2` from the source you can clone the reposito
 git clone --recurse-submodules https://github.com/cyberbotics/epuck_ros2.git src/epuck_ros2
 ```
 
-Install dependencies:
+Install dependencies with [`rosdep`](http://wiki.ros.org/rosdep):
 ```
 rosdep install --from-paths src --ignore-src -r -y
 ```
 
-Then simply build it with `colcon`:
+Then simply build it with [`colcon`](https://colcon.readthedocs.io/en/released/user/installation.html):
 ```
 colcon build
 ```
