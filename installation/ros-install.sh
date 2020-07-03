@@ -55,7 +55,6 @@ rosdep update
 rosdep install --from-paths src --ignore-src --rosdistro eloquent -y --skip-keys "console_bridge fastcdr fastrtps libopensplice67 libopensplice69 rti-connext-dds-5.3.1 urdfdom_headers"
 
 # EPuck dependencies
-pip3 install smbus2
 wget https://raw.githubusercontent.com/gctronic/Pi-puck/master/system/pi-puck-v4_0.dtbo
 wget https://raw.githubusercontent.com/gctronic/Pi-puck/master/system/config.txt
 wget https://raw.githubusercontent.com/gctronic/Pi-puck/master/system/update.sh
