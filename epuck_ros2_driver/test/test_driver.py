@@ -34,9 +34,9 @@ import os
 SENSORS_SIZE = 47
 ACTUATOR_SIZE = 20
 DISTANCE_FROM_CENTER = 0.035
-READ_WRITE_RETRY_N = 6
+READ_WRITE_RETRY_COUNT = 6
 READ_WRITE_RETRY_DELAY = 0.05
-MESSAGE_SEND_RETRY_N = 6
+MESSAGE_SEND_RETRY_COUNT = 6
 MESSAGE_SEND_DELAY = 0.1
 
 
@@ -62,7 +62,7 @@ def int162arr(val):
 
 def read_params_from_i2c(idx=4, address=0x1F):
     params = {}
-    for _ in range(READ_WRITE_RETRY_N):
+    for _ in range(READ_WRITE_RETRY_COUNT):
         with open(f'/tmp/dev/i2c-{idx}_write_' + str(address), 'r+b') as f:
             buffer = list(f.read())
             if len(buffer) > 0:
@@ -93,7 +93,7 @@ def write_params_to_i2c(params, idx=4, address=0x1F):
         buffer[SENSORS_SIZE - 1] ^= buffer[i]
 
     # Write the buffer
-    for _ in range(READ_WRITE_RETRY_N):
+    for _ in range(READ_WRITE_RETRY_COUNT):
         with open(f'/tmp/dev/i2c-{idx}_read_' + str(address), 'w+b') as f:
             n_bytes = f.write(bytearray(buffer))
             if n_bytes == SENSORS_SIZE:
@@ -128,7 +128,7 @@ def publish_twist(node, linear_x=0.0, linear_y=0.0, angular_z=0.0):
         'cmd_vel',
         1
     )
-    for _ in range(MESSAGE_SEND_RETRY_N):
+    for _ in range(MESSAGE_SEND_RETRY_COUNT):
         msg = Twist()
         msg.angular.x = 0.0
         msg.angular.y = 0.0
