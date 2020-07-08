@@ -31,15 +31,9 @@ RUN pip3 install \
     vcstool
 ENV PATH=/home/develop/.local/bin/:$PATH
 
-# ROS2 workspace
-RUN mkdir -p /home/develop/ros2_ws/src
-WORKDIR /home/develop/ros2_ws
-ENV ROS_PACKAGE_PATH=/home/develop/ros2_ws/src
-RUN wget https://raw.githubusercontent.com/ros2/ros2/foxy/ros2.repos
-RUN vcs import ${ROS_PACKAGE_PATH} < ros2.repos
-
-# Compile
-WORKDIR /home/develop/ros2_ws
+# Prepare workspace
+WORKDIR /home/develop
 COPY rpi_toolchain.cmake rpi_toolchain.cmake
 COPY bashrc.sh bashrc.sh
 RUN cat bashrc.sh >> $HOME/.bashrc
+WORKDIR /home/develop/ros2_ws

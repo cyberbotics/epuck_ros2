@@ -6,12 +6,9 @@ set(CMAKE_CROSSCOMPILING 1)
 
 set(CMAKE_C_COMPILER arm-linux-gnueabihf-gcc-6)
 set(CMAKE_CXX_COMPILER arm-linux-gnueabihf-g++-6)
+set(CMAKE_SYSROOT /home/develop/rootfs)
 
-# set(CMAKE_SYSROOT ${SYSROOT_PATH})
-# set(TOOLCHAIN_PATH /home/develop/cross-pi-gcc)
-# set(SYSROOT_PATH /home/develop/sysroot)
-
-set(CMAKE_FIND_ROOT_PATH $HOME/ros2_ws/install)
+set(CMAKE_FIND_ROOT_PATH /home/develop/ros2_ws/install)
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
