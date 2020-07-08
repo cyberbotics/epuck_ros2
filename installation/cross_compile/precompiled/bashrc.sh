@@ -19,4 +19,6 @@ wprepare() {
     cd /home/develop/ros2_ws
     wget https://raw.githubusercontent.com/ros2/ros2/foxy/ros2.repos
     vcs import /home/develop/ros2_ws/src < ros2.repos
+ 
+    # sed -i 's/-DFOONATHAN_MEMORY_BUILD_TOOLS=ON/-DFOONATHAN_MEMORY_BUILD_TOOLS=OFF/' /home/develop/ros2_ws/src/eProsima/foonathan_memory_vendor/CMakeLists.txt
 }

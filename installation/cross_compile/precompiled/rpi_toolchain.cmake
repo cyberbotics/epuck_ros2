@@ -14,3 +14,6 @@ set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 set(PYTHON_SOABI cpython-37m-arm-linux-gnueabihf)
+
+# https://github.com/foonathan/memory/pull/60
+set(CMAKE_CROSSCOMPILING_EMULATOR /usr/bin/qemu-arm-static)
