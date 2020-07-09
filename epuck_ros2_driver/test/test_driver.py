@@ -34,6 +34,10 @@ import os
 SENSORS_SIZE = 47
 ACTUATOR_SIZE = 20
 DISTANCE_FROM_CENTER = 0.035
+READ_WRITE_RETRY_COUNT = 6
+READ_WRITE_RETRY_DELAY = 0.05
+MESSAGE_SEND_RETRY_COUNT = 6
+MESSAGE_SEND_DELAY = 0.1
 
 
 def arr2int16(arr):
@@ -58,7 +62,7 @@ def int162arr(val):
 
 def read_params_from_i2c(idx=4, address=0x1F):
     params = {}
-    for _ in range(3):
+    for _ in range(READ_WRITE_RETRY_COUNT):
         with open(f'/tmp/dev/i2c-{idx}_write_' + str(address), 'r+b') as f:
             buffer = list(f.read())
             if len(buffer) > 0:
@@ -66,7 +70,7 @@ def read_params_from_i2c(idx=4, address=0x1F):
                 params['right_speed'] = arr2int16(buffer[2:4])
                 params['led1'] = buffer[6:9]
                 return params, buffer
-        time.sleep(0.01)
+        time.sleep(READ_WRITE_RETRY_DELAY)
     return params, []
 
 
@@ -89,12 +93,12 @@ def write_params_to_i2c(params, idx=4, address=0x1F):
         buffer[SENSORS_SIZE - 1] ^= buffer[i]
 
     # Write the buffer
-    for _ in range(3):
+    for _ in range(READ_WRITE_RETRY_COUNT):
         with open(f'/tmp/dev/i2c-{idx}_read_' + str(address), 'w+b') as f:
             n_bytes = f.write(bytearray(buffer))
             if n_bytes == SENSORS_SIZE:
                 return
-        time.sleep(0.01)
+        time.sleep(READ_WRITE_RETRY_DELAY)
 
 
 def check_topic_condition(
@@ -124,7 +128,7 @@ def publish_twist(node, linear_x=0.0, linear_y=0.0, angular_z=0.0):
         'cmd_vel',
         1
     )
-    for _ in range(3):
+    for _ in range(MESSAGE_SEND_RETRY_COUNT):
         msg = Twist()
         msg.angular.x = 0.0
         msg.angular.y = 0.0
@@ -133,10 +137,10 @@ def publish_twist(node, linear_x=0.0, linear_y=0.0, angular_z=0.0):
         msg.linear.y = linear_y
         msg.linear.z = 0.0
         pub.publish(msg)
-        time.sleep(0.1)
+        time.sleep(MESSAGE_SEND_DELAY)
 
     # Wait a bit
-    time.sleep(0.1)
+    time.sleep(MESSAGE_SEND_DELAY)
     node.destroy_publisher(pub)
 
 
@@ -154,9 +158,9 @@ def generate_test_description():
     Launch decription configuration.
 
     To run the tests you can use either `launch_test` directly as:
-    $ launch_test src/epuck_ros2/epuck_ros2_cpp/test/test_driver.py
+    $ launch_test src/epuck_ros2/epuck_ros2_driver/test/test_driver.py
     or `colcon`:
-    $ colcon test --packages-select epuck_ros2_cpp
+    $ colcon test --packages-select epuck_ros2_driver
 
     The testing procedure is based on `launch_test`:
     https://github.com/ros2/launch/tree/master/launch_testing
@@ -170,7 +174,7 @@ def generate_test_description():
         f.write(bytearray([0] * 6))
 
     controller = launch_ros.actions.Node(
-        package='epuck_ros2_cpp',
+        package='epuck_ros2_driver',
         node_executable='driver',
         output='screen',
         arguments=['--type', 'test']
@@ -262,22 +266,22 @@ class TestController(unittest.TestCase):
             condition, 'The node hasn\'t published any distance measurement')
 
     def test_laser_scan(self, launch_service, proc_output):
-        write_params_to_i2c({'ps3': 120})
+        write_params_to_i2c({'ps3': 1465.73})
         condition = check_topic_condition(
             self.node,
             LaserScan,
             'scan',
-            lambda msg: abs(msg.ranges[0] - 0.05 -
-                            DISTANCE_FROM_CENTER) < 1E-3)
+            lambda msg: abs(msg.ranges[0] - 0.01 -
+                            DISTANCE_FROM_CENTER) < 1E-2)
         self.assertTrue(
             condition, 'Sensor ps3 at -150 doesn\'t give a good results')
 
-        write_params_to_i2c({'ps2': 120})
+        write_params_to_i2c({'ps2': 1465.73})
         condition = check_topic_condition(
             self.node,
             LaserScan,
             'scan',
-            lambda msg: abs(msg.ranges[4] - 0.05 - DISTANCE_FROM_CENTER) < 1E-3
+            lambda msg: abs(msg.ranges[4] - 0.01 - DISTANCE_FROM_CENTER) < 1E-2
         )
         self.assertTrue(
             condition, 'Sensor ps2 at -90 doesn\'t give a good results')
@@ -291,7 +295,7 @@ class TestController(unittest.TestCase):
         cli.wait_for_service(timeout_sec=1.0)
         set_param(cli, 'wheel_distance', 0.05685)
         set_param(cli, 'wheel_radius', 0.02)
-        time.sleep(0.1)
+        time.sleep(MESSAGE_SEND_DELAY)
 
         # Set odometry to I2C and verify
         write_params_to_i2c({'left_position': 2000 / (2 * pi)})
@@ -324,7 +328,7 @@ class TestController(unittest.TestCase):
         cli.wait_for_service(timeout_sec=1.0)
         set_param(cli, 'wheel_distance', 0.05685)
         set_param(cli, 'wheel_radius', 0.02)
-        time.sleep(0.1)
+        time.sleep(MESSAGE_SEND_DELAY)
 
         # Set odometry to I2C and verify
         write_params_to_i2c({'left_position': -2000 / (2 * pi)})
@@ -340,7 +344,7 @@ class TestController(unittest.TestCase):
     def test_imu(self, launch_service, proc_output):
         with open(f'/tmp/dev/i2c-4_read_' + str(0x68), 'w+b') as f:
             f.write(bytearray([0]*6))
-        time.sleep(0.1)
+        time.sleep(MESSAGE_SEND_DELAY)
         condition = check_topic_condition(
             self.node,
             Imu,
@@ -351,7 +355,7 @@ class TestController(unittest.TestCase):
 
         with open(f'/tmp/dev/i2c-4_read_' + str(0x68), 'w+b') as f:
             f.write(bytearray([127, 0] * 3))
-        time.sleep(0.1)
+        time.sleep(MESSAGE_SEND_DELAY)
         condition = check_topic_condition(
             self.node,
             Imu,
@@ -372,7 +376,7 @@ class TestController(unittest.TestCase):
             msg = Int32()
             msg.data = 0xFFFFFF
             pub.publish(msg)
-            time.sleep(0.1)
+            time.sleep(MESSAGE_SEND_DELAY)
 
         self.node.destroy_publisher(pub)
         # Check what has been written to I2C
