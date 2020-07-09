@@ -37,7 +37,7 @@ RUN tar xfz raspi-toolchain.tar.gz --strip-components=1 -C /opt
 # Prepare workspace
 USER develop
 WORKDIR /home/develop
-COPY rpi_toolchain.cmake rpi_toolchain.cmake
+COPY toolchain.cmake toolchain.cmake
 COPY bashrc.sh bashrc.sh
 RUN cat bashrc.sh >> $HOME/.bashrc
 WORKDIR /home/develop/ros2_ws
