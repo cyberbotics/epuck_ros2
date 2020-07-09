@@ -29,7 +29,7 @@ There are two ways to get the sysroot on your PC.
 
 The first way, you can synchronize the content of the sysroot:
 ```bash
-rsync -rLR --safe-links pi@raspberrypi.local:/{lib,usr,opt/vc/lib} ./ros2-raspbian-rootfs
+rsync -rLR --safe-links pi@raspberrypi.local:/{lib,usr,opt/vc/lib} ./rpi_rootfs
 ```
 
 > Initially, `rsync` will take more time to perform synchronization, but cross-compilation process will be faster after (as the cross-compiler doesn't have to ask for a file every time).
@@ -37,11 +37,11 @@ rsync -rLR --safe-links pi@raspberrypi.local:/{lib,usr,opt/vc/lib} ./ros2-raspbi
 
 The second way, you can use `sshfs` tool to mount the sysroot:
 ```bash
-sshfs -o follow_symlinks,allow_other -o cache_timeout=115200 pi@raspberrypi.local:/ ./ros2-raspbian-rootfs
+sshfs -o follow_symlinks,allow_other -o cache_timeout=115200 pi@raspberrypi.local:/ ./rpi_rootfs
 ```
 you may need:
 ```
-sudo echo 'user_allow_other' >> /etc/fuse.conf
+sudo sh -c 'echo user_allow_other >> /etc/fuse.conf'
 ```
 
 ## ROS2 Base Cross-Compilation on Your PC
