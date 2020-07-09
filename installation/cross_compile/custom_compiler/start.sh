@@ -1,2 +1,0 @@
-docker build . -t armv6-ros2-toolchain
-docker run -it -v $HOME/rpi:/home/develop/sysroot --mount type=bind,src=$(pwd)/rpi_toolchain.cmake,dst=/home/develop/ros2_ws/rpi_toolchain.cmake armv6-ros2-toolchain /bin/bash
