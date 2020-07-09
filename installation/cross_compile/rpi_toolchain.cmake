@@ -7,6 +7,8 @@ set(CMAKE_CROSSCOMPILING 1)
 set(CMAKE_C_COMPILER /opt/cross-pi-gcc/bin/arm-linux-gnueabihf-gcc)
 set(CMAKE_CXX_COMPILER /opt/cross-pi-gcc/bin/arm-linux-gnueabihf-g++)
 set(CMAKE_SYSROOT /home/develop/rootfs)
+
+# https://github.com/eProsima/Fast-DDS/issues/1262
 set(CMAKE_CXX_FLAGS "-latomic")
 
 set(CMAKE_FIND_ROOT_PATH /home/develop/ros2_ws/install)

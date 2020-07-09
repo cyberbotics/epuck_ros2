@@ -9,7 +9,10 @@ RUN apt-get install -y \
     git \
     cmake \
     qemu-user-static \
-    python3-numpy
+    python3-numpy \
+    sshfs \
+    rsync
+RUN echo user_allow_other >> /etc/fuse.conf
 
 # Add user
 RUN useradd -m develop

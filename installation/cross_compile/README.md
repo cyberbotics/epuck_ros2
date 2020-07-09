@@ -1,14 +1,13 @@
 # Cross-Compilation
-Since processing power of Raspberry Pi Zero module is insufficient for "quick" compilation we made tools to help you compile ROS2 on your PC for the Raspberry Pi Zero.
+Since processing power of the Raspberry Pi Zero module is insufficient for "quick" compilation we made tools to help you compile ROS2 on your PC for the Raspberry Pi Zero.
 Therefore, this tutorial will give you instructions on how to use the tools to cross-compile ROS2 for Raspberry Pi Zero (could be also extended to other Raspberry Pi versions).
 
 ## Prerequisites
-Please make sure everything is ready for you proceed:
+Please make sure everything is ready for you to proceed:
 - Raspberry Pi OS ready on your Raspberry Pi ([tutorial](https://www.raspberrypi.org/documentation/installation/installing-images/)).
 - SSH access to Raspberry Pi ([tutorial](../README.md#wifi-and-ssh)).
-- It is preferable to have Ubuntu installed on your PC.
 - Docker on your PC ([tutorial](https://docs.docker.com/get-docker/)).
-- `sshfs` package on your PC (`sudo apt install sshfs`).
+- Optional SSH server on your PC (`sudo apt install openssh-server`).
 
 ## Raspberry Pi Preparation
 
@@ -23,13 +22,13 @@ sudo apt install \
 
 ## Your PC Preparation
 
-Now, as your Raspberry Pi is equiped with ROS2 dependencies you can synchronize the [sysroot](https://wiki.dlang.org/GDC/Cross_Compiler/Existing_Sysroot#:~:text=A%20sysroot%20is%20a%20folder,sysroot%2Fusr%2Finclude'.).
+Now, as your Raspberry Pi is equipped with ROS2 dependencies you can synchronize the [sysroot](https://wiki.dlang.org/GDC/Cross_Compiler/Existing_Sysroot#:~:text=A%20sysroot%20is%20a%20folder,sysroot%2Fusr%2Finclude'.).
 This will allow the cross-compiler to use header files and libraries from your Raspberry Pi.
-There are two ways to get the sysroot on your PC.
+There are two ways to get the sysroot inside your Docker.
 
 The first way, you can synchronize the content of the sysroot:
 ```bash
-rsync -rLR --safe-links pi@raspberrypi.local:/{lib,usr,opt/vc/lib} ./rpi_rootfs
+rsync -rLR --safe-links pi@raspberrypi.local:/{lib,usr,opt/vc/lib} /home/develop/rootfs
 ```
 
 > Initially, `rsync` will take more time to perform synchronization, but cross-compilation process will be faster after (as the cross-compiler doesn't have to ask for a file every time).
@@ -37,11 +36,7 @@ rsync -rLR --safe-links pi@raspberrypi.local:/{lib,usr,opt/vc/lib} ./rpi_rootfs
 
 The second way, you can use `sshfs` tool to mount the sysroot:
 ```bash
-sshfs -o follow_symlinks,allow_other -o cache_timeout=115200 pi@raspberrypi.local:/ ./rpi_rootfs
-```
-you may need:
-```
-sudo sh -c 'echo user_allow_other >> /etc/fuse.conf'
+sshfs -o follow_symlinks,allow_other -o cache_timeout=115200 pi@raspberrypi.local:/ /home/develop/rootfs
 ```
 
 ## ROS2 Base Cross-Compilation on Your PC
@@ -63,17 +58,23 @@ cross-initialize
 ```
 to download ROS2 source code and:
 ```
-cross-colcon-build
+cross-colcon-build --packages-up-to ros2topic
 ```
 to compile it.
 
 ## Using the Cross-Compiled ROS2 on your Raspberry Pi
 
-To use the cross-compiled ROS2 on your Raspberry Pi you have to copy `./ros2_ws/install` to the Raspberry Pi or to mount it, e.g.:
-```
+To use the cross-compiled ROS2 on your Raspberry Pi you have to copy `./ros2_ws/install` to the Raspberry Pi.
+Alternatevelly, you can mount it by running the following commands on Raspberry Pi:
+```bash
 mkdir ros2
 sshfs [pc_username]@[pc_address]:[path_to_this_folder]/ros2_ws/install ros2
 source ros2/local_setup.bash
+```
+But in that case, make sure your PC has SSH server installed and configured:
+```bash
+sudo apt install openssh-server
+sudo systemctl start sshd
 ```
 
 ## Cross-Compiling Custom ROS2 Packages
