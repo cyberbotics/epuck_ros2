@@ -14,10 +14,17 @@ Please make sure everything is ready for you to proceed:
 ROS2 requires the following packages to be installed on your Raspberry Pi:
 ```bash
 sudo apt update
+
+# Compilation dependencies
 sudo apt install \
-    liblog4cxx-dev \
+    liblog4cxx-dev
+
+# Runtime dependencies
+sudo apt install \
     python3-numpy \
-    python3-dev
+    python3-dev \
+    python3-netifaces \
+    python3-yaml
 ```
 
 ## Your PC Preparation
