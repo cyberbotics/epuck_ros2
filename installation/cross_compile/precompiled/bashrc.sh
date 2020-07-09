@@ -1,11 +1,9 @@
 wcolcon() {
-    export TOOLCHAIN_PREFIX=arm-linux-gnueabih
-    touch src/eclipse-cyclonedds/COLCON_IGNORE
-
+    export C_INCLUDE_PATH=/home/develop/rootfs/usr/include
+    export CPLUS_INCLUDE_PATH=/home/develop/rootfs/usr/include
     colcon build \
         --merge-install \
-        --packages-up-to ros2cli \
-        --continue-on-error \
+        --packages-up-to ros2topic \
         --cmake-force-configure \
         --cmake-args \
         -DCMAKE_TOOLCHAIN_FILE=/home/develop/rpi_toolchain.cmake \
@@ -19,6 +17,4 @@ wprepare() {
     cd /home/develop/ros2_ws
     wget https://raw.githubusercontent.com/ros2/ros2/foxy/ros2.repos
     vcs import /home/develop/ros2_ws/src < ros2.repos
- 
-    # sed -i 's/-DFOONATHAN_MEMORY_BUILD_TOOLS=ON/-DFOONATHAN_MEMORY_BUILD_TOOLS=OFF/' /home/develop/ros2_ws/src/eProsima/foonathan_memory_vendor/CMakeLists.txt
 }

@@ -4,9 +4,10 @@ set(CMAKE_SYSTEM_PROCESSOR arm)
 set(CMAKE_LIBRARY_ARCHITECTURE arm-linux-gnueabihf)
 set(CMAKE_CROSSCOMPILING 1)
 
-set(CMAKE_C_COMPILER arm-linux-gnueabihf-gcc-6)
-set(CMAKE_CXX_COMPILER arm-linux-gnueabihf-g++-6)
+set(CMAKE_C_COMPILER /opt/cross-pi-gcc/bin/arm-linux-gnueabihf-gcc)
+set(CMAKE_CXX_COMPILER /opt/cross-pi-gcc/bin/arm-linux-gnueabihf-g++)
 set(CMAKE_SYSROOT /home/develop/rootfs)
+set(CMAKE_CXX_FLAGS "-latomic")
 
 set(CMAKE_FIND_ROOT_PATH /home/develop/ros2_ws/install)
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)

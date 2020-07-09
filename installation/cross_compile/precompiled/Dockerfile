@@ -41,7 +41,12 @@ RUN pip3 install \
     lark-parser
 ENV PATH=/home/develop/.local/bin/:$PATH
 
+USER root
+RUN wget https://github.com/Pro/raspi-toolchain/releases/latest/download/raspi-toolchain.tar.gz
+RUN tar xfz raspi-toolchain.tar.gz --strip-components=1 -C /opt
+
 # Prepare workspace
+USER develop
 WORKDIR /home/develop
 COPY rpi_toolchain.cmake rpi_toolchain.cmake
 COPY bashrc.sh bashrc.sh
