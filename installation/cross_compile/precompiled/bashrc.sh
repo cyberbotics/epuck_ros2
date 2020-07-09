@@ -1,4 +1,4 @@
-wcolcon() {
+cross-colcon-build() {
     export C_INCLUDE_PATH=/home/develop/rootfs/usr/include
     export CPLUS_INCLUDE_PATH=/home/develop/rootfs/usr/include
     colcon build \
@@ -12,7 +12,7 @@ wcolcon() {
         -DBUILD_TESTING:BOOL=OFF
 }
 
-wprepare() {
+cross-initialize() {
     mkdir -p /home/develop/ros2_ws/src
     cd /home/develop/ros2_ws
     wget https://raw.githubusercontent.com/ros2/ros2/foxy/ros2.repos
