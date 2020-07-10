@@ -5,7 +5,7 @@ Please note that neither ARMv6 architecture, neither Debian (Raspberry Pi OS is 
 
 After the Raspberry Pi OS is booted and you have an SSH connection please execute the following command:
 ```
-curl https://raw.githubusercontent.com/cyberbotics/epuck_ros2/master/installation/compile/compile.sh | sh
+curl https://raw.githubusercontent.com/cyberbotics/epuck_ros2/master/installation/compile/compile.sh | bash
 ```
 > Note that this script is in very early stage and it may fail.
 In case of failure try to understand which package has caused the error and check if the community on GitHub has the solution.
