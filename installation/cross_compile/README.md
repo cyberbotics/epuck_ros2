@@ -35,7 +35,7 @@ The supplied Docker image is equipped with most of the tools you need, so start 
 ./start_docker.sh
 ```
 This command will build and run the Docker container, and allocate a pseudo-TTY.
-It means that you can use it as another operating system.
+It means that you can use it as an another operating system.
 From now on, most of the tasks you will be able to do from the Docker container.
 
 
@@ -50,7 +50,7 @@ The first way, you can synchronize the content of the rootfs:
 rsync -rLR --safe-links pi@[raspberry_pi_ip]:/{lib,usr,opt/vc/lib} /home/develop/rootfs
 ```
 
-> Initially, `rsync` will take more time to perform synchronization, but the cross-compilation process will be faster after (as the cross-compiler doesn't have to ask for a file every time).
+> Initially, `rsync` will take more time to perform synchronization, but the cross-compilation process will be faster after (as the cross-compiler doesn't have to transfer a file from Raspberry Pi every time).
 
 
 The second way, you can use `sshfs` tool to mount the rootfs:
@@ -95,7 +95,7 @@ sudo systemctl start sshd
 ## Cross-Compiling Custom ROS2 Packages
 
 With these tools, you can compile custom ROS2 packages as well.
-It is enough to put a source of the package to `./ros2_ws/src` and inside of the Docker run `cross-colcon-build`.
+It is enough to put a source code of the package to `./ros2_ws/src` and inside of the Docker run `cross-colcon-build`.
 For example, to compile `epuck_ros2` package execute the following:
 
 ```bash
@@ -107,7 +107,7 @@ cross-colcon-build --packages-up-to epuck_ros2_driver
 
 ### Missing Dependencies
 
-Sometimes, your package will need ROS2 packages that are not a part of ROS2 base.
+Sometimes, your package will depend on ROS2 packages that are not a part of ROS2 base.
 In that case, you can use `cross-generator` to download it.
 For example, in case of `epuck_ros2` package, dependency `camera_info_manager` is missing, so you can download it as:
 ```bash
