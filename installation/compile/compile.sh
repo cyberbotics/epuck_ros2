@@ -1,15 +1,18 @@
+export ROS_DISTRO=foxy
+
 # Set Locale
 sudo locale-gen en_US en_US.UTF-8
 sudo update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
 export LANG=en_US.UTF-8
 
 # Add the ROS 2 apt repository
-sudo apt update && sudo apt install curl gnupg2 lsb-release
+sudo apt update 
+sudo apt install curl gnupg2 lsb-release
 curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
 sudo sh -c 'echo "deb [arch=amd64,arm64] http://packages.ros.org/ros2/ubuntu `lsb_release -cs` main" > /etc/apt/sources.list.d/ros2-latest.list'
 
 # Install development tools and ROS tools
-sudo apt update && sudo apt install -y \
+sudo apt install -y \
   build-essential \
   cmake \
   git \
@@ -19,7 +22,8 @@ sudo apt update && sudo apt install -y \
   python3-vcstool \
   wget \
   python-rosinstall-generator
-# install some pip packages needed for testing
+
+# Install some pip packages needed for testing
 python3 -m pip install -U \
   argcomplete \
   flake8 \
@@ -37,25 +41,34 @@ python3 -m pip install -U \
   pytest-cov \
   pytest-runner \
   setuptools
-# install Fast-RTPS dependencies
+
+# Install Fast-RTPS dependencies
 sudo apt install --no-install-recommends -y \
   libasio-dev \
   libtinyxml2-dev
-# install CycloneDDS dependencies
+
+# Install CycloneDDS dependencies
 sudo apt install --no-install-recommends -y \
   libcunit1-dev
 
 # Get ROS2 Code
-rosinstall_generator --deps --rosdistro eloquent ros_base > ros2.repos
+cd $HOME
+mkdir -p ros2/src
+cd $HOME/ros2
+rosinstall_generator --deps --rosdistro foxy ros_base > ros2.repos
 vcs import src < ros2.repos
 
 # Install external dependencies
 sudo rosdep init
 rosdep update
-rosdep install --from-paths src --ignore-src --rosdistro eloquent -y --skip-keys "console_bridge fastcdr fastrtps libopensplice67 libopensplice69 rti-connext-dds-5.3.1 urdfdom_headers"
+rosdep install --from-paths src --ignore-src --rosdistro foxy -y --skip-keys "console_bridge fastcdr fastrtps libopensplice67 libopensplice69 rti-connext-dds-5.3.1 urdfdom_headers"
 
-# EPuck dependencies
-wget https://raw.githubusercontent.com/gctronic/Pi-puck/master/system/pi-puck-v4_0.dtbo
-wget https://raw.githubusercontent.com/gctronic/Pi-puck/master/system/config.txt
-wget https://raw.githubusercontent.com/gctronic/Pi-puck/master/system/update.sh
-sh update.sh
+# E-Puck configuration
+cd /tmp
+wget https://raw.githubusercontent.com/cyberbotics/epuck_ros2/master/installation/compile/pi-puck-v4_0.dtbo
+wget https://raw.githubusercontent.com/cyberbotics/epuck_ros2/master/installation/compile/config.txt
+sudo cp config.txt /boot/config.txt
+sudo rm /boot/overlays/pi-puck-*
+sudo cp pi-puck-*.dtbo /boot/overlays/
+sync
+sudo reboot

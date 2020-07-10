@@ -17,14 +17,17 @@ sudo apt update
 
 # Compilation dependencies
 sudo apt install \
-    liblog4cxx-dev
+    liblog4cxx-dev \
+    python3-dev
 
 # Runtime dependencies
 sudo apt install \
     python3-numpy \
-    python3-dev \
     python3-netifaces \
     python3-yaml
+
+# Tools
+sudo apt install sshfs
 ```
 
 ## ROS2 Cross-Compilation on Your PC
