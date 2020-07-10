@@ -30,7 +30,7 @@ sudo apt install \
 ## ROS2 Cross-Compilation on Your PC
 
 Now we can start a process of ROS2 cross-compilation.
-The supplied Docker image is equipped with most of the tools you need, so start it:
+The supplied Docker image is equipped with most of the tools you need, so start it with:
 ```bash
 ./start_docker.sh
 ```
