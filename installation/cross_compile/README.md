@@ -36,7 +36,7 @@ The supplied Docker image is equipped with most of the tools you need, so start 
 ```
 This command will build and run the Docker container, and allocate a pseudo-TTY.
 It means that you can use it as an another operating system.
-From now on, most of the tasks you will be able to do from the Docker container.
+From now on, you will be able to do most of the tasks from the Docker container.
 
 
 ### Rootfs Preparation
