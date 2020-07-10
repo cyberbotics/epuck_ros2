@@ -109,7 +109,7 @@ cross-colcon-build --packages-up-to epuck_ros2_driver
 
 Sometimes, your package will depend on ROS2 packages that are not a part of ROS2 base.
 In that case, you can use `cross-generator` to download it.
-For example, in case of `epuck_ros2` package, dependency `camera_info_manager` is missing, so you can download it as:
+For example, in case of `epuck_ros2` package, dependency `camera_info_manager` is missing, so you can download it with:
 ```bash
 cross-generator camera_info_manager
 ```
