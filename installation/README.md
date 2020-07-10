@@ -4,10 +4,10 @@ Currently, we provide a few methods to install ROS2 and the `epuck_ros2` package
 The following table compares the installation methods (`+` means better, not smaller):
 
 |   | [Using Pi-puck Image](#using-pi-puck-image) | [Compilation on the Raspberry Pi](#fresh-ros2-installation) | [Cross-compilation on your PC](./cross_compile) |
-|-------------------|----|----|----|
-| Compilation speed | ++ | -  | +  |
-| Easy to use       | ++ | -  | -- |
-| Flexibility       | -  | ++ | +  |
+|-------------------|:---:|:---:|:---:|
+| Compilation speed |  ++ |  -  |  +  |
+| Easy to use       |  ++ |  -  |  -- |
+| Flexibility       |  -  |  ++ |  +  |
 
 ---
 
