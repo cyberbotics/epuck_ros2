@@ -1,6 +1,14 @@
 export ROS_DISTRO=foxy
 
 cross-colcon-build() {
+    if [ ! "$(ls -A /home/develop/rootfs/)" ]; then
+        echo "WARNING: Your rootfs directory is empty!"
+        echo "    Please mount rootfs using e.g. 'sshfs -o follow_symlinks,allow_other -o cache_timeout=115200 pi@[raspberry_pi_ip]:/ /home/develop/rootfs'"
+        echo "    or synchronize it with e.g. 'rsync -rLR --safe-links pi@[raspberry_pi_ip]:/{lib,usr,opt/vc/lib} /home/develop/rootfs'"
+        echo "    Otherwise, the empty rootfs directory may cause your build to fail!"
+        echo ""
+    fi
+
     export C_INCLUDE_PATH="/home/develop/rootfs/usr/include"
     export CPLUS_INCLUDE_PATH="/home/develop/rootfs/usr/include"
 
