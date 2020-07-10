@@ -1,4 +1,4 @@
-## Compile ROS2 on Raspberry Pi
+# Compile ROS2 on Raspberry Pi
 In certain use cases, you may prefer to install ROS2, `epuck_ros2`, configure the device tree and install dependencies manually.
 This is way more complicated and time consuming than using the provided image, but it is the only way to install a ROS2 version other than the ones provided by us.
 Please note that neither ARMv6 architecture, neither Debian (Raspberry Pi OS is based on Debian) are supported by ROS2 and therefore, you may need to manually solve the compilation issues.
