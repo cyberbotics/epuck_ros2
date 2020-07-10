@@ -1,7 +1,7 @@
 # ROS2 Installation
 
 Currently, we provide a few methods to install ROS2 and the `epuck_ros2` package.
-The following table compares the installation methods (`+` means better, not smaller):
+The following table compares the installation methods:
 
 |   | [Using Pi-puck Image](#using-pi-puck-image) | [Compilation on the Raspberry Pi](#fresh-ros2-installation) | [Cross-compilation on your PC](./cross_compile) |
 |-------------------|:---:|:---:|:---:|
