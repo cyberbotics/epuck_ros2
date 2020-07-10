@@ -60,7 +60,7 @@ sshfs -o follow_symlinks,allow_other -o cache_timeout=115200 pi@[raspberry_pi_ip
 
 ### Compilation Commands 
 
-In the Docker, we prepare a few commands with prefix `cross-*` to bootstrap your development.
+In the Docker, we prepared a few commands with prefix `cross-*` to bootstrap your development.
 For example, you can use `cross-initialize` to download ROS2 source code or `cross-colcon-build` to build it.
 These commands are simple bash functions located in `.bashrc`.
 You can see how the commands are implemented by typing e.g. `type cross-initialize` and change them according to your needs.
@@ -68,11 +68,16 @@ Therefore, in the Docker container type:
 ```bash
 cross-initialize
 ```
-to download ROS2 source code and:
+to download ROS2 source code.
+By default, it will initialize ROS2 Foxy distribution, but if you want to change it use `ROS_DISTRO` environment, e.g. for ROS2 Dashing:
+```bash
+export ROS_DISTRO=dashing
+```
+
+To compile the ROS2 source code execute:
 ```bash
 cross-colcon-build --packages-up-to ros2topic
 ```
-to compile it.
 
 > Flag `--packages-up-to ros2topic` will compile `ros2topic` and all it's recursive dependencies.
 Also, note that it can happen you need to run the command twice to compile `fastrtps` package.
