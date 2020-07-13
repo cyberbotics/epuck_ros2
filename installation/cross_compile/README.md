@@ -26,7 +26,7 @@ sudo apt install \
     python3-netifaces \
     python3-yaml
 
-# Tools
+# Optional tools
 sudo apt install sshfs
 ```
 
