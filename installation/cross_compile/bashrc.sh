@@ -9,8 +9,8 @@ cross-colcon-build() {
         echo ""
     fi
 
-    export C_INCLUDE_PATH="/home/develop/rootfs/usr/include"
-    export CPLUS_INCLUDE_PATH="/home/develop/rootfs/usr/include"
+    export C_INCLUDE_PATH="/home/develop/rootfs/usr/include:/home/develop/rootfs/usr/include/arm-linux-gnueabihf"
+    export CPLUS_INCLUDE_PATH="/home/develop/rootfs/usr/include:/home/develop/rootfs/usr/include/arm-linux-gnueabihf"
 
     colcon build \
         $@ \
