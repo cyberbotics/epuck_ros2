@@ -103,7 +103,7 @@ sudo systemctl start sshd
 ## Cross-Compiling Custom ROS2 Packages
 
 With these tools, you can compile custom ROS2 packages as well.
-It is enough to put a source code of the package to `./ros2_ws/src` and inside of the Docker run `cross-colcon-build`.
+It is enough to put the source code of the package to `./ros2_ws/src` and run `cross-colcon-build` inside the Docker.
 For example, to compile `epuck_ros2` package execute the following:
 
 ```bash
