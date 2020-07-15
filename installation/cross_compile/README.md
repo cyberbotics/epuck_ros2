@@ -1,5 +1,5 @@
 # Cross-Compilation
-Since the processing power of the Raspberry Pi Zero module is insufficient for "quick" compilation, we made tools to help you compile ROS2 on your PC for the Raspberry Pi Zero.
+Since the processing power of the Raspberry Pi Zero module is insufficient for a "quick" compilation, we made tools to help you compile ROS2 on your PC for the Raspberry Pi Zero.
 Therefore, this tutorial will give you instructions on how to use the tools to cross-compile ROS2 for Raspberry Pi Zero (could be also extended to other Raspberry Pi versions).
 
 ## Prerequisites
