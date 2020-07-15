@@ -111,7 +111,7 @@ git clone --recurse-submodules https://github.com/cyberbotics/epuck_ros2.git src
 cross-colcon-build --packages-up-to epuck_ros2_driver
 ```
 
-> You can use `--packages-select epuck_ros2_driver` flag to compile `epuck_ros2_driver` package only.
+> You can use the `--packages-select epuck_ros2_driver` flag to compile the `epuck_ros2_driver` package only.
 
 ### Missing Dependencies
 
