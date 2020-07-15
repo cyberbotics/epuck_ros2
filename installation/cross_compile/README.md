@@ -83,7 +83,7 @@ cross-colcon-build --packages-up-to ros2topic
 ```
 
 > Flag `--packages-up-to ros2topic` will compile `ros2topic` and all it's recursive dependencies.
-Also, note that it can happen you need to run the command twice to compile `fastrtps` package.
+Also, note that it can happen that you need to run the command twice to compile `fastrtps` package.
 
 ## Using the Cross-Compiled ROS2 on your Raspberry Pi
 
