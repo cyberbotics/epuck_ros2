@@ -41,6 +41,7 @@ This command will build and run the Docker container, and allocate a pseudo-TTY.
 It means that you can use it as an another operating system.
 From now on, you will be able to do most of the tasks from the Docker container.
 
+> If you use Linux, please make sure you did [the post-installation steps](https://docs.docker.com/engine/install/linux-postinstall/).
 
 ### Rootfs Preparation
 
