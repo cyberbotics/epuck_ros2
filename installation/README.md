@@ -1,8 +1,13 @@
 # ROS2 Installation
 
-Currently, we provide two ways to install ROS2 and the `epuck_ros2` package:
-- [Easy and recommended](#using-pi-puck-image): Using the given SD card image with ROS2 and `epuck_ros2` preinstalled.
-- [Hard](#fresh-ros2-installation): Fresh ROS2 installation on top of [Raspberry Pi OS (based on Debian Buster)](https://www.raspberrypi.org/downloads/raspberry-pi-os/).
+Currently, we provide a few methods to install ROS2 and the `epuck_ros2` package.
+The following table compares the installation methods:
+
+|   | [Using Pi-puck Image](#using-pi-puck-image) | [Compilation on the Raspberry Pi](./compile) | [Cross-compilation on your PC](./cross_compile) |
+|-------------------|:---:|:---:|:---:|
+| Compilation speed |  ++ |  -  |  +  |
+| Easy to use       |  ++ |  -  |  -- |
+| Flexibility       |  -  |  ++ |  +  |
 
 ---
 
@@ -58,23 +63,6 @@ ROS2 installation is located in `/home/pi/ros2_ws`, so you can navigate inside a
 source install/local_setup.bash
 ros2 launch webots_ros2_epuck2 robot_launch.py
 ```
-
----
-
-## Fresh ROS2 Installation
-In certain use cases, you may prefer to install ROS2, `epuck_ros2`, configure the device tree and install dependencies manually.
-This is way more complicated and time consuming than using the provided image, but it is the only way to install a ROS2 version other than the ones provided by us.
-Please note that neither ARMv6 architecture, neither Debian (Raspberry Pi OS is based on Debian) are supported by ROS2 and therefore, you may need to manually solve the compilation issues.
-
-After the Raspberry Pi OS is booted and you have an SSH connection please execute the following command:
-```
-curl https://raw.githubusercontent.com/cyberbotics/epuck_ros2/master/installation/ros-install.sh | sh
-```
-> Note that this script is in very early stage and it may fail.
-In case of failure try to understand which package has caused the error and check if the community on GitHub has the solution.
-Also, there are around 200 ROS2 packages and it will take a long time to compile.
-
-The script will install dependencies, download ROS2 locally, compile and configure the device tree necessary for Raspberry Pi to communicate with the e-puck2 base.
 
 ### Creating Custom Image
 
