@@ -64,7 +64,7 @@ sshfs -o follow_symlinks,allow_other -o cache_timeout=115200 pi@[raspberry_pi_ip
 ### Compilation Commands 
 
 In the Docker, we prepared a few commands with the `cross-*` prefix to bootstrap your development.
-For example, you can use `cross-initialize` to download ROS2 source code or `cross-colcon-build` to build it.
+For example, you can use `cross-initialize` to download the ROS2 source code or `cross-colcon-build` to build it.
 These commands are simple bash functions located in `.bashrc`.
 You can see how the commands are implemented by typing e.g. `type cross-initialize` and change them according to your needs.
 Therefore, in the Docker container type:
