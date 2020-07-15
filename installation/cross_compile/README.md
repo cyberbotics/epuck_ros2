@@ -71,7 +71,7 @@ Therefore, in the Docker container type:
 ```bash
 cross-initialize
 ```
-to download ROS2 source code.
+to download the ROS2 source code.
 By default, it will initialize ROS2 Foxy distribution, but if you want to change it you can use `ROS_DISTRO` environment variable, e.g. for ROS2 Dashing:
 ```bash
 export ROS_DISTRO=dashing
