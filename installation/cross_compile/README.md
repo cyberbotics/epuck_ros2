@@ -94,7 +94,7 @@ mkdir ros2
 sshfs [pc_username]@[pc_address]:[path_to_this_folder]/ros2_ws/install ros2
 source ros2/local_setup.bash
 ```
-But in that case, make sure your PC has SSH server installed and configured:
+But in that case, make sure that your PC has SSH server installed and configured:
 ```bash
 sudo apt install openssh-server
 sudo systemctl start sshd
