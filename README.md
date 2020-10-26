@@ -9,7 +9,7 @@ This package adds ROS2 support for the [e-puck](https://www.gctronic.com/doc/ind
 Please use the following links for the instructions:
 - [Installation](./installation/README.md)
 - [Getting Started](#getting-started)
-- [Examples](https://github.com/cyberbotics/webots_ros2/blob/master/webots_ros2_epuck/EPUCK_ROS2.md)
+- [Examples](https://github.com/cyberbotics/webots_ros2/wiki/Tutorial-E-puck-for-ROS2-Beginners)
 - [Simulation](https://github.com/cyberbotics/webots_ros2/tree/master/webots_ros2_epuck)
 
 ## Getting Started

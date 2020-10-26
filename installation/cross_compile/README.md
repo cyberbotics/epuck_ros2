@@ -88,7 +88,12 @@ Also, note that it can happen that you need to run the command twice to compile 
 
 ## Using the Cross-Compiled ROS2 on your Raspberry Pi
 
-To use the cross-compiled ROS2 on your Raspberry Pi you have to copy `./ros2_ws/install` to the Raspberry Pi.
+To use the cross-compiled ROS2 on your Raspberry Pi you have to copy `./ros2_ws/install` to the Raspberry Pi:
+```bash
+scp -r install pi@[raspberry_pi_ip]:/home/pi/ros2
+```
+> Once the `install` directory is copied you can use `source /home/pi/ros2/local_setup.bash` to set-up ROS2 on the Raspberry Pi.
+
 Alternatively, you can mount it by running the following commands on the Raspberry Pi:
 ```bash
 mkdir ros2
