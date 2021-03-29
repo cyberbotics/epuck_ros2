@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 if [ ! -d "./ros2_ws" ]; then
   mkdir -p ./ros2_ws
   chmod 777 ./ros2_ws
