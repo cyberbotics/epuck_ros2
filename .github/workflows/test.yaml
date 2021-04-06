@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+jobs:
+  industrial_ci:
+    strategy:
+      fail-fast: false
+      matrix:
+        ROS_REPO: [main, testing]
+        ROS_DISTRO: [foxy]
+    env:
+      CMAKE_ARGS: "-DAVOID_EPUCK_CAMERA_BUILD=true"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+        with:
+         submodules: recursive
+      - uses: 'ros-industrial/industrial_ci@master'
+        env: 
+          ROS_REPO: ${{matrix.ROS_REPO}}
+          ROS_DISTRO: ${{matrix.ROS_DISTRO}}
