@@ -1,8 +1,7 @@
 FROM ubuntu:18.04
 
 # Install dependencies
-RUN apt-get update
-RUN apt-get install -y \
+RUN apt-get update && apt-get install -y \
     wget \
     tar \
     python3-pip \
@@ -11,7 +10,8 @@ RUN apt-get install -y \
     qemu-user-static \
     python3-numpy \
     sshfs \
-    rsync
+    rsync \
+    && rm -rf /var/lib/apt/lists/*
 RUN echo user_allow_other >> /etc/fuse.conf
 
 # Add user
@@ -21,7 +21,7 @@ RUN usermod -aG sudo develop
 
 # ROS2 developmnet dependencies
 USER develop
-RUN pip3 install \
+RUN pip3 install --no-cache-dir \
     rosinstall_generator \
     colcon-common-extensions \
     vcstool \
@@ -31,8 +31,9 @@ ENV PATH=/home/develop/.local/bin/:$PATH
 # Install compiler
 USER root
 WORKDIR /tmp
-RUN wget https://github.com/Pro/raspi-toolchain/releases/latest/download/raspi-toolchain.tar.gz
-RUN tar xfz raspi-toolchain.tar.gz --strip-components=1 -C /opt
+RUN wget https://github.com/Pro/raspi-toolchain/releases/latest/download/raspi-toolchain.tar.gz \
+    && tar xfz raspi-toolchain.tar.gz --strip-components=1 -C /opt \
+    && rm raspi-toolchain.tar.gz
 
 # Prepare workspace
 USER develop
