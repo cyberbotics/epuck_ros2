@@ -121,12 +121,12 @@ public:
 
     // Create I2C object
     if (type == "test")
-      mI2cMain = std::make_shared<I2CWrapperTest>("/dev/i2c-4");
+      mI2cMain = std::make_shared<I2CWrapperTest>("/dev/i2c-12");
     else
-      mI2cMain = std::make_shared<I2CWrapperHW>("/dev/i2c-4");
+      mI2cMain = std::make_shared<I2CWrapperHW>("/dev/i2c-12");
     mImu = std::make_shared<MPU9250>(mI2cMain);
     mImu->calibrate();
-    mTofInitStatus = tofInit(4, 0x29, 1);
+    mTofInitStatus = tofInit(12, 0x29, 1);
     if (!mTofInitStatus)
       RCLCPP_WARN(get_logger(), "ToF device is not accessible!");
 

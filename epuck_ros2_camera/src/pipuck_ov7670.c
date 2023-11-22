@@ -15,7 +15,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#define I2C_CHANNEL 4
+#define I2C_CHANNEL 12
 #define OV7670_ADDR 0x21
 
 /*######################
@@ -96,7 +96,7 @@ int read_i2c(uint8_t reg, uint8_t *val) {
 }
 
 int pipuck_ov7670_init(void) {
-  sprintf(filename, "/dev/i2c-%d", 4);
+  sprintf(filename, "/dev/i2c-%d", I2C_CHANNEL);
   if ((file = open(filename, O_RDWR)) < 0) {
     /* ERROR HANDLING: you can check errno to see what went wrong */
     perror("Failed to open the i2c bus");
