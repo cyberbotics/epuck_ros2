@@ -42,7 +42,7 @@ def _get_params(buffer):
 
 while True:
     data = []
-    with open('/tmp/dev/i2c-4_write', 'rb') as f:
+    with open('/tmp/dev/i2c-12_write', 'rb') as f:
         data = list(f.read())
 
     if len(data) > 0 and prev_data != data:
