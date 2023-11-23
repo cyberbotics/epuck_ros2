@@ -60,7 +60,7 @@ def int162arr(val):
     return arr
 
 
-def read_params_from_i2c(idx=4, address=0x1F):
+def read_params_from_i2c(idx=12, address=0x1F):
     params = {}
     for _ in range(READ_WRITE_RETRY_COUNT):
         with open(f'/tmp/dev/i2c-{idx}_write_' + str(address), 'r+b') as f:
@@ -74,7 +74,7 @@ def read_params_from_i2c(idx=4, address=0x1F):
     return params, []
 
 
-def write_params_to_i2c(params, idx=4, address=0x1F):
+def write_params_to_i2c(params, idx=12, address=0x1F):
     buffer = [0] * SENSORS_SIZE
 
     # Fill the buffer
