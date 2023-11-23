@@ -60,7 +60,7 @@ def int162arr(val):
     return arr
 
 
-def read_params_from_i2c(idx=4, address=0x1F):
+def read_params_from_i2c(idx=12, address=0x1F):
     params = {}
     for _ in range(READ_WRITE_RETRY_COUNT):
         with open(f'/tmp/dev/i2c-{idx}_write_' + str(address), 'r+b') as f:
@@ -74,7 +74,7 @@ def read_params_from_i2c(idx=4, address=0x1F):
     return params, []
 
 
-def write_params_to_i2c(params, idx=4, address=0x1F):
+def write_params_to_i2c(params, idx=12, address=0x1F):
     buffer = [0] * SENSORS_SIZE
 
     # Fill the buffer
@@ -170,7 +170,7 @@ def generate_test_description():
     # Inital IMU data
     if not os.path.exists('/tmp/dev'):
         os.makedirs('/tmp/dev')
-    with open(f'/tmp/dev/i2c-4_read_' + str(0x68), 'w+b') as f:
+    with open(f'/tmp/dev/i2c-12_read_' + str(0x68), 'w+b') as f:
         f.write(bytearray([0] * 6))
 
     controller = launch_ros.actions.Node(
@@ -342,7 +342,7 @@ class TestController(unittest.TestCase):
         self.assertTrue(condition, 'Should move backward')
 
     def test_imu(self, launch_service, proc_output):
-        with open(f'/tmp/dev/i2c-4_read_' + str(0x68), 'w+b') as f:
+        with open(f'/tmp/dev/i2c-12_read_' + str(0x68), 'w+b') as f:
             f.write(bytearray([0]*6))
         time.sleep(MESSAGE_SEND_DELAY)
         condition = check_topic_condition(
@@ -353,7 +353,7 @@ class TestController(unittest.TestCase):
         )
         self.assertTrue(condition, 'IMU should publish zeros')
 
-        with open(f'/tmp/dev/i2c-4_read_' + str(0x68), 'w+b') as f:
+        with open(f'/tmp/dev/i2c-12_read_' + str(0x68), 'w+b') as f:
             f.write(bytearray([127, 0] * 3))
         time.sleep(MESSAGE_SEND_DELAY)
         condition = check_topic_condition(
